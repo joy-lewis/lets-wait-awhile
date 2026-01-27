@@ -8,8 +8,9 @@ import numpy as np
 from typing import Optional, Tuple, Dict
 import pandas as pd
 import copy
-
-
+import matplotlib.pyplot as plt
+from pathlib import Path
+from eval import plot_random_test_forecasts, plot_loss
 
 def run_training(
     df: pd.DataFrame,
@@ -23,6 +24,16 @@ def run_training(
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
     cfg=None,
 ):
+
+    print("Training started with config:\n"
+          f"feature_cols: {feature_cols}\n"
+          f"target_col: {target_col}\n"
+          f"lookback_steps: {lookback_steps}\n"
+          f"horizon_steps: {horizon_steps}\n"
+          f"batch_size: {batch_size}\n"
+          f"lr: {lr}\n"
+          f"epochs: {epochs}\n"
+          f"device: {device}\n")
 
     # Make sure required columns exist
     missing = [c for c in feature_cols + [target_col] if c not in df.columns]
@@ -63,11 +74,16 @@ def run_training(
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
+    print(f"Number of training samples: {len(train_loader)} with batch size: {batch_size}")
+    print(f"Number of validation samples: {len(val_loader)} with batch size: {batch_size}")
+
     # Model
     model = LSTMMultiHorizon(cfg).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    loss_fn = nn.SmoothL1Loss()  # good default for regression; swap to MSELoss if you want
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=5e-5)
+
+    loss_fn = nn.SmoothL1Loss()  # Huber loss
 
     def eval_loader(best_model, loader: DataLoader) -> float:
         best_model.eval()
@@ -84,6 +100,8 @@ def run_training(
     # Train
     best_val_loss = float("inf")
     best_val_model = None
+    train_loss_list = []
+    val_loss_list = []
 
     for epoch in range(1, epochs + 1):
         model.train()
@@ -109,13 +127,20 @@ def run_training(
         train_loss = float(np.mean(train_losses)) if train_losses else float("nan")
         val_loss = eval_loader(model, val_loader)
 
+        train_loss_list.append(train_loss)
+        val_loss_list.append(val_loss)
+
+        # Decay LR
+        scheduler.step()
+        current_lr = optimizer.param_groups[0]['lr']
+
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_state = copy.deepcopy(model.state_dict())
             torch.save(model.state_dict(), "best_model.pth")
-            print(f"\n🎉NEW BEST: Epoch {epoch:03d} | train_loss={train_loss:.5f} | val_loss={val_loss:.5f}\n")
+            print(f"🎉NEW BEST - Epoch: {epoch} | train_loss={train_loss:.5f} | val_loss={val_loss:.5f} | lr: {current_lr:.5f}")
         else:
-            print(f"Epoch {epoch:03d} | train_loss={train_loss:.5f} | val_loss={val_loss:.5f}")
+            print(f"Epoch: {epoch} | train_loss={train_loss:.5f} | val_loss={val_loss:.5f} | lr: {current_lr:.5f}")
 
     # Test
     model.load_state_dict(best_state)
@@ -123,14 +148,21 @@ def run_training(
     test_loss = eval_loader(model, test_loader)
     print(f"Test loss: {test_loss:.5f}")
 
-    return {
-        "model": model,
-        "df_regular": df,
-        "scalers": {"x_mean": x_mean, "x_std": x_std, "y_mean": y_mean, "y_std": y_std},
-        "splits": splits,
-        "steps": {"lookback_steps": lookback_steps, "horizon_steps": horizon_steps},
-    }
 
+    # Eval
+    plot_random_test_forecasts(
+        model=model,
+        test_ds=test_ds,
+        df=df,
+        target_col=target_col,
+        device=device,
+        n=5,                # <-- set how many random instances you want
+        seed=42,
+        out_dir="plots",
+        show=False,
+    )
+
+    plot_loss(train_loss_list, val_loss_list)
 
 if __name__ == "__main__":
     pass

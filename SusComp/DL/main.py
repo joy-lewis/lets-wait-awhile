@@ -135,29 +135,28 @@ def main():
     cfg = LSTMForecastConfig(
         input_size=len(FEATURE_COLS)+6,  # +6 time encodings
         horizon=24,
-        hidden_size=128,
+        hidden_size=256,
         num_layers=2,
         dropout=0.2,
         bidirectional=False,
-        head_hidden_size=128,
-        head_dropout=0.1,
+        head_hidden_size=256,
+        head_dropout=0.2,
         use_layernorm=True,
     )
 
     # Running training pipeline
-    results = train.run_training(
+    train.run_training(
         df=df,
         feature_cols=FEATURE_COLS,
         target_col=TARGET_COL,
-        lookback_steps=30*24,
+        lookback_steps=14*24,
         horizon_steps=24,      # set None to infer; use "H" if your data is hourly
         batch_size=64,
-        lr=1e-3,
-        epochs=20,
+        lr=0.0012,
+        epochs=50,
         device="cuda" if torch.cuda.is_available() else "cpu",
         cfg=cfg,
     )
-    print(results)
 
 if __name__ == "__main__":
     #test()
