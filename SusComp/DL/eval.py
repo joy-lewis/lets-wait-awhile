@@ -16,7 +16,7 @@ def plot_random_test_forecasts(
         show: bool = False,
 ) -> None:
     """
-    Plots n random 24-step forecasts vs ground truth from the test set.
+    Plots n random 24-horizon forecasts vs ground truth from the test set.
     Saves figures to out_dir as PNGs.
     """
     rng = np.random.default_rng(seed)
@@ -62,7 +62,7 @@ def plot_random_test_forecasts(
             plt.show()
         plt.close()
 
-    print(f"Saved {n} forecast plot(s) to: {out_dir}/")
+    print(f"Saved {n} forecast plot to: {out_dir}/")
 
 
 def plot_loss(
@@ -74,9 +74,6 @@ def plot_loss(
 ) -> None:
     """
     Plots train/val loss curves and saves to a PNG.
-
-    train_losses: list/sequence of per-epoch training losses
-    val_losses:   list/sequence of per-epoch validation losses
     """
     if len(train_losses) == 0 or len(val_losses) == 0:
         print("No losses to plot.")

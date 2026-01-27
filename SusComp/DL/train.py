@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from eval import plot_random_test_forecasts, plot_loss
 
+
 def run_training(
     df: pd.DataFrame,
     feature_cols: list[str],
@@ -81,7 +82,7 @@ def run_training(
     model = LSTMMultiHorizon(cfg).to(device)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=20, eta_min=5e-5)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=14, eta_min=5e-5)
 
     loss_fn = nn.SmoothL1Loss()  # Huber loss
 
@@ -99,7 +100,6 @@ def run_training(
 
     # Train
     best_val_loss = float("inf")
-    best_val_model = None
     train_loss_list = []
     val_loss_list = []
 

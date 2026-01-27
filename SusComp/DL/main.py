@@ -4,9 +4,6 @@ import models
 import torch
 import pandas as pd
 
-
-import pandas as pd
-
 def sanity_check_timeseries_df(df: pd.DataFrame,feature_cols: list[str], target_col: str, expected_freq: str = "H",):
     # Index checks
     if not isinstance(df.index, pd.DatetimeIndex):
@@ -149,7 +146,7 @@ def main():
         df=df,
         feature_cols=FEATURE_COLS,
         target_col=TARGET_COL,
-        lookback_steps=14*24,
+        lookback_steps=30*24,
         horizon_steps=24,      # set None to infer; use "H" if your data is hourly
         batch_size=64,
         lr=0.0012,
@@ -160,4 +157,6 @@ def main():
 
 if __name__ == "__main__":
     #test()
+    #raise NotImplementedError("Make a model that predicts only the median carbon intensity of the next day instead of"
+    #                         "heaving to predict all hourly values")
     main()

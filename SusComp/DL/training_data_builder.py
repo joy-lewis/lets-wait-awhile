@@ -9,10 +9,7 @@ import pandas as pd
 
 def time_features_from_datetime_parts(hour: torch.Tensor, dow: torch.Tensor, doy: torch.Tensor) -> torch.Tensor:
     """
-    hour: (N,) int tensor [0..23]
-    dow:  (N,) int tensor [0..6]
-    doy:  (N,) int tensor [1..366]
-    returns: (N, 6) float tensor [sin/cos hour, sin/cos dow, sin/cos doy]
+    We encode the full date+time to a continuous numeric value so the model can handle it better
     """
     hour = hour.float()
     dow = dow.float()
@@ -34,8 +31,8 @@ def time_features_from_datetime_parts(hour: torch.Tensor, dow: torch.Tensor, doy
 
 class WindowedForecastDataset(Dataset):
     """
-    Each sample:
-      x: (lookback_steps, F_num + F_time)
+    Each data sample, that we will use for training is constructed like this:
+      x: (lookback_steps, total number of features)
       y: (horizon_steps,)
     """
     def __init__(
@@ -150,7 +147,7 @@ def compute_scalers(df: pd.DataFrame, feature_cols: list[str], target_col: str, 
     """
     train_start_t, train_end_t = train_t_range
 
-    # Use feature rows that appear in training windows:
+    # feature rows that appear in training windows:
     # windows cover indices [t-lookback, t), so overall training history spans
     # [train_start_t - lookback, train_end_t)
     hist_start = max(0, train_start_t - lookback_steps)
