@@ -29,6 +29,7 @@ EMISSION_MAP = {  # all these features should be also represented in the SusComp
     'Wind Onshore':12,
 }
 
+
 def add_carbon_intensity(df):
     """
     Compute power-weighted carbon intensity (gCO2/kWh)

@@ -99,3 +99,57 @@ def plot_loss(
     plt.close()
 
     print(f"Saved loss curve to: {out_path}")
+
+
+import numpy as np
+import torch
+
+@torch.no_grad()
+def permutation_importance(
+        model,
+        loader,
+        loss_fn,
+        device,
+        n_features: int,
+        n_repeats: int = 5,
+        max_batches: int | None = None,
+):
+    model.eval()
+
+    # 1) baseline loss
+    base_losses = []
+    for bi, (x, y) in enumerate(loader):
+        if max_batches is not None and bi >= max_batches:
+            break
+        x = x.to(device)
+        y = y.to(device)
+        y_hat = model(x)
+        base_losses.append(loss_fn(y_hat, y).item())
+    baseline = float(np.mean(base_losses))
+
+    # 2) permute each feature
+    importances = np.zeros(n_features, dtype=np.float64)
+
+    for f in range(n_features):
+        deltas = []
+        for r in range(n_repeats):
+            losses = []
+            for bi, (x, y) in enumerate(loader):
+                if max_batches is not None and bi >= max_batches:
+                    break
+                x = x.to(device)
+                y = y.to(device)
+
+                # permute feature f across batch
+                perm = torch.randperm(x.size(0), device=device)
+                x_perm = x.clone()
+                x_perm[:, :, f] = x[perm, :, f]
+
+                y_hat = model(x_perm)
+                losses.append(loss_fn(y_hat, y).item())
+
+            deltas.append(float(np.mean(losses)) - baseline)
+
+        importances[f] = float(np.mean(deltas))
+
+    return baseline, importances

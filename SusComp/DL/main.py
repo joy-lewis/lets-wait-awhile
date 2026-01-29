@@ -3,6 +3,8 @@ import train
 import models
 import torch
 import pandas as pd
+from xai import run_xai_permutation
+
 
 def sanity_check_timeseries_df(df: pd.DataFrame,feature_cols: list[str], target_col: str, expected_freq: str = "H",):
     # Index checks
@@ -52,6 +54,7 @@ def sanity_check_timeseries_df(df: pd.DataFrame,feature_cols: list[str], target_
         f"✅ sanity_check passed | rows={len(df)} | "
         f"range={df.index.min()} → {df.index.max()} | freq={inferred}"
     )
+    return df
 
 
 
@@ -126,7 +129,7 @@ def main():
     df = df.sort_index()
 
     # Sanity check
-    sanity_check_timeseries_df(df, feature_cols=FEATURE_COLS, target_col=TARGET_COL, expected_freq="h")
+    df = sanity_check_timeseries_df(df, feature_cols=FEATURE_COLS, target_col=TARGET_COL, expected_freq="h")
 
     # Model configuration
     cfg = LSTMForecastConfig(
@@ -155,8 +158,69 @@ def main():
         cfg=cfg,
     )
 
+def xai():
+    # Setting features
+    FEATURE_COLS = [ # all these features should be also represented in the SusComp/compute_carbon_intensity.py mapping
+        'Biomass',
+        #'Energy storage',
+        'Fossil Brown coal/Lignite',
+        'Fossil Coal-derived gas',
+        'Fossil Gas',
+        'Fossil Hard coal',
+        'Fossil Oil',
+        #'Fossil Oil shale',
+        #'Fossil Peat',
+        'Geothermal',
+        #'Hydro Pumped Storage',
+        'Hydro Run-of-river and pondage',
+        'Hydro Water Reservoir',
+        #'Marine',
+        'Nuclear',
+        'Other',
+        'Other renewable',
+        'Solar',
+        'Waste',
+        'Wind Offshore',
+        'Wind Onshore',
+    ]
+
+    TARGET_COL = "carbon_intensity"
+
+    # Loading data
+    df = pd.read_csv("../new_data/germany_2325_ci.csv", index_col=0, parse_dates=True)
+    df = df.sort_index()
+
+    # Sanity check
+    df = sanity_check_timeseries_df(df, feature_cols=FEATURE_COLS, target_col=TARGET_COL, expected_freq="h")
+
+    # Model configuration
+    cfg = LSTMForecastConfig(
+        input_size=len(FEATURE_COLS)+6,  # +6 time encodings
+        horizon=24,
+        hidden_size=256,
+        num_layers=2,
+        dropout=0.2,
+        bidirectional=False,
+        head_hidden_size=256,
+        head_dropout=0.2,
+        use_layernorm=True,
+    )
+
+    res = run_xai_permutation(
+        df=df,
+        feature_cols=FEATURE_COLS,
+        target_col=TARGET_COL,
+        cfg=cfg,
+        model_pth_path="best_model.pth",
+        lookback_steps=30*24,
+        horizon_steps=24,
+        batch_size=64,
+        n_repeats=5,
+        max_batches=100,
+        out_dir="xai",
+    )
+
 if __name__ == "__main__":
     #test()
-    #raise NotImplementedError("Make a model that predicts only the median carbon intensity of the next day instead of"
-    #                         "heaving to predict all hourly values")
-    main()
+    #main()
+    xai()
