@@ -1,5 +1,5 @@
-from training_data_builder import anchored_train_val_test_split_indices, compute_scalers_from_ts, WindowedForecastDataset
-from models import LSTMMultiHorizon
+from training_data_builder import anchored_train_val_test_split_indices, compute_scalers_hist_and_fut, WindowedForecastDatasetWithFuture
+from models import LSTMMultiHorizonWithFuture
 import math
 import torch
 import torch.nn as nn
@@ -15,7 +15,8 @@ from eval import plot_random_test_forecasts, plot_loss
 
 def run_training(
     df: pd.DataFrame,
-    feature_cols: list[str],
+    hist_feature_cols: list[str],
+    fut_feature_cols: list[str],
     target_col: str,
     lookback_steps: int = 30*24, # 30 days and 24 hours/day
     horizon_steps: int = 24, # 24 hours
@@ -26,8 +27,16 @@ def run_training(
     cfg=None,
 ):
 
+    # Make sure required columns exist
+    missing = [c for c in hist_feature_cols + fut_feature_cols + [target_col] if c not in df.columns]
+    if missing:
+        raise ValueError(f"Missing columns in df: {missing}")
+
+    splits = anchored_train_val_test_split_indices(df, lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
+
     print("Training started with config:\n"
-          f"feature_cols: {feature_cols}\n"
+          f"hist_feature_cols: {hist_feature_cols}\n"
+          f"fut_feature_cols: {fut_feature_cols}\n"
           f"target_col: {target_col}\n"
           f"lookback_steps: {lookback_steps}\n"
           f"horizon_steps: {horizon_steps}\n"
@@ -36,40 +45,54 @@ def run_training(
           f"epochs: {epochs}\n"
           f"device: {device}\n")
 
-    # Make sure required columns exist
-    missing = [c for c in feature_cols + [target_col] if c not in df.columns]
-    if missing:
-        raise ValueError(f"Missing columns in df: {missing}")
-
-    splits = anchored_train_val_test_split_indices(df, lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
-
-    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
-    df, feature_cols, target_col, splits["train"], lookback_steps)
-
-    # Datasets
-    train_ds = WindowedForecastDataset(
-        df=df, feature_cols=feature_cols, target_col=target_col,
-        lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        x_mean=x_mean, x_std=x_std,
-        scale_y=False, y_mean=y_mean, y_std=y_std,
-        anchor_hour=3, anchor_minute=0,
-        ts=splits["train"]
+    xh_mean, xh_std, xf_mean, xf_std, y_mean, y_std = compute_scalers_hist_and_fut(
+        df, hist_feature_cols, fut_feature_cols, target_col,
+        splits["train"], lookback_steps, horizon_steps
     )
-    val_ds = WindowedForecastDataset(
-        df=df, feature_cols=feature_cols, target_col=target_col,
-        lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        x_mean=x_mean, x_std=x_std,
+
+    train_ds = WindowedForecastDatasetWithFuture(
+        df=df,
+        hist_feature_cols=hist_feature_cols,
+        fut_feature_cols=fut_feature_cols,
+        target_col=target_col,
+        lookback_steps=lookback_steps,
+        horizon_steps=horizon_steps,
+        ts=splits["train"],
+        x_hist_mean=xh_mean, x_hist_std=xh_std,
+        x_fut_mean=xf_mean,  x_fut_std=xf_std,
         scale_y=False, y_mean=y_mean, y_std=y_std,
         anchor_hour=3, anchor_minute=0,
-        ts=splits["val"]
+        add_time_features_to_future=True,
     )
-    test_ds = WindowedForecastDataset(
-        df=df, feature_cols=feature_cols, target_col=target_col,
-        lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        x_mean=x_mean, x_std=x_std,
+
+    val_ds = WindowedForecastDatasetWithFuture(
+        df=df,
+        hist_feature_cols=hist_feature_cols,
+        fut_feature_cols=fut_feature_cols,
+        target_col=target_col,
+        lookback_steps=lookback_steps,
+        horizon_steps=horizon_steps,
+        ts=splits["val"],
+        x_hist_mean=xh_mean, x_hist_std=xh_std,
+        x_fut_mean=xf_mean,  x_fut_std=xf_std,
         scale_y=False, y_mean=y_mean, y_std=y_std,
         anchor_hour=3, anchor_minute=0,
-        ts=splits["val"]
+        add_time_features_to_future=True,
+    )
+
+    test_ds = WindowedForecastDatasetWithFuture(
+        df=df,
+        hist_feature_cols=hist_feature_cols,
+        fut_feature_cols=fut_feature_cols,
+        target_col=target_col,
+        lookback_steps=lookback_steps,
+        horizon_steps=horizon_steps,
+        ts=splits["test"],
+        x_hist_mean=xh_mean, x_hist_std=xh_std,
+        x_fut_mean=xf_mean,  x_fut_std=xf_std,
+        scale_y=False, y_mean=y_mean, y_std=y_std,
+        anchor_hour=3, anchor_minute=0,
+        add_time_features_to_future=True,
     )
 
     # DataLoaders
@@ -81,7 +104,8 @@ def run_training(
     print("train batches:", len(train_loader), "val batches:", len(val_loader))
 
     # Model
-    model = LSTMMultiHorizon(cfg).to(device)
+    model = LSTMMultiHorizonWithFuture(cfg).to(device)
+    print(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=14, eta_min=5e-5)
@@ -92,12 +116,14 @@ def run_training(
         best_model.eval()
         losses = []
         with torch.no_grad():
-            for x, y in loader:
-                x = x.to(device)
-                y = y.to(device)
-                y_hat = best_model(x)
-                loss = loss_fn(y_hat, y)
-                losses.append(loss.item())
+            for xv_hist, xv_fut, yv in loader:
+                xv_hist = xv_hist.to(device)
+                xv_fut  = xv_fut.to(device)
+                yv      = yv.to(device)
+
+                yv_hat = model(xv_hist, xv_fut)
+                loss_v = loss_fn(yv_hat, yv)
+                losses.append(loss_v.item())
         return float(np.mean(losses)) if losses else float("nan")
 
     # Train
@@ -108,15 +134,15 @@ def run_training(
     for epoch in range(1, epochs + 1):
         model.train()
         train_losses = []
-        for x, y in train_loader:
-
+        for x_hist, x_fut, y in train_loader:
             if epoch==1:
-                print(f"x shape: {x.shape}, y shape: {y.shape}")
-            x = x.to(device)
-            y = y.to(device)
+                print(f"x_hist shape: {x_hist.shape}, x_fut shape: {x_fut.shape} y shape: {y.shape}")
+            x_hist = x_hist.to(device)
+            x_fut  = x_fut.to(device)
+            y      = y.to(device)
 
             optimizer.zero_grad(set_to_none=True)
-            y_hat = model(x)
+            y_hat = model(x_hist, x_fut)
             loss = loss_fn(y_hat, y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
@@ -162,7 +188,7 @@ def run_training(
         target_col=target_col,
         device=device,
         n=5,                # <-- set how many random instances you want
-        seed=42,
+        seed=7,
         out_dir="plots",
         show=False,
         anchor_hour=3,

@@ -50,7 +50,7 @@ def plot_random_test_forecasts(
     idxs = rng.choice(len(test_ds), size=n, replace=False)
 
     for k, ds_idx in enumerate(idxs):
-        x, y = test_ds[ds_idx]              # x: (L, F), y: (H,)
+        x_hist, x_fut, y = test_ds[ds_idx]              # x: (L, F), y: (H,)
         t = int(test_ds.ts[ds_idx])         # forecast start iloc index in df
 
         horizon_len = int(y.shape[0])
@@ -66,8 +66,9 @@ def plot_random_test_forecasts(
                 )
 
         with torch.no_grad():
-            x_in = x.unsqueeze(0).to(device)   # (1, L, F)
-            y_hat = model(x_in).squeeze(0).detach().cpu().numpy()
+            x_hist_in = x_hist.unsqueeze(0).to(device)   # (1, L, F)
+            x_fut_in = x_fut.unsqueeze(0).to(device)
+            y_hat = model(x_hist_in, x_fut_in).squeeze(0).detach().cpu().numpy()
 
         y_true = y.detach().cpu().numpy()
 

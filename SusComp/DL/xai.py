@@ -14,10 +14,10 @@ import matplotlib.pyplot as plt
 
 from training_data_builder import (
     anchored_train_val_test_split_indices,
-    compute_scalers_from_ts,
-    WindowedForecastDataset,
+    compute_scalers_hist_and_fut,
+    WindowedForecastDatasetWithFuture,
 )
-from models import LSTMMultiHorizon
+from models import LSTMMultiHorizonWithFuture
 
 
 TIME_FEATURE_NAMES = ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "doy_sin", "doy_cos"]
@@ -33,12 +33,14 @@ def _eval_loss(
 ) -> float:
     model.eval()
     losses: List[float] = []
-    for bi, (x, y) in enumerate(loader):
+    for bi, (x_hist, x_fut, y) in enumerate(loader):
         if max_batches is not None and bi >= max_batches:
             break
-        x = x.to(device)
-        y = y.to(device)
-        y_hat = model(x)
+        x_hist = x_hist.to(device)
+        x_fut  = x_fut.to(device)
+        y      = y.to(device)
+
+        y_hat = model(x_hist, x_fut)
         loss = loss_fn(y_hat, y)
         losses.append(float(loss.item()))
     return float(np.mean(losses)) if losses else float("nan")
@@ -78,18 +80,19 @@ def _permutation_importance(
             torch.manual_seed(int(repeat_seeds[r]))  # controls torch.randperm
 
             losses = []
-            for bi, (x, y) in enumerate(loader):
+            for bi, (x_hist, x_fut, y) in enumerate(loader):
                 if max_batches is not None and bi >= max_batches:
                     break
 
-                x = x.to(device)
-                y = y.to(device)
+                x_hist = x_hist.to(device)
+                x_fut  = x_fut.to(device)
+                y      = y.to(device)
 
-                perm = torch.randperm(x.size(0), device=device)
-                x_perm = x.clone()
-                x_perm[:, :, f] = x[perm, :, f]
+                perm = torch.randperm(x_hist.size(0), device=device)
+                x_perm = x_hist.clone()
+                x_perm[:, :, f] = x_hist[perm, :, f]
 
-                y_hat = model(x_perm)
+                y_hat = model(x_perm, x_fut)
                 loss = loss_fn(y_hat, y)
                 losses.append(float(loss.item()))
 
@@ -105,7 +108,8 @@ def _permutation_importance(
 
 def run_xai_permutation(
         df: pd.DataFrame,
-        feature_cols: Sequence[str],
+        hist_feature_cols: Sequence[str],
+        fut_feature_cols: Sequence[str],
         target_col: str,
         cfg,
         model_pth_path: str | Path = "best_model.pth",
@@ -134,7 +138,7 @@ def run_xai_permutation(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    feature_cols = list(feature_cols)
+    feature_cols = list(hist_feature_cols+fut_feature_cols)
 
     # sanity checks
     missing = [c for c in feature_cols + [target_col] if c not in df.columns]
@@ -143,40 +147,26 @@ def run_xai_permutation(
     if not isinstance(df.index, pd.DatetimeIndex):
         raise ValueError("df.index must be a DatetimeIndex.")
 
-    # ✅ FIX 1: call split with df, not len(df)
-    splits = anchored_train_val_test_split_indices(
-        df=df,
-        lookback_steps=lookback_steps,
-        horizon_steps=horizon_steps,
-        anchor_hour=anchor_hour,
-        anchor_minute=anchor_minute,
+    splits = anchored_train_val_test_split_indices(df, lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
+
+    xh_mean, xh_std, xf_mean, xf_std, y_mean, y_std = compute_scalers_hist_and_fut(
+        df, hist_feature_cols, fut_feature_cols, target_col,
+        splits["train"], lookback_steps, horizon_steps
     )
 
-    # scalers from TRAIN ts only
-    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
+    test_ds = WindowedForecastDatasetWithFuture(
         df=df,
-        feature_cols=feature_cols,
-        target_col=target_col,
-        train_ts=splits["train"],
-        lookback_steps=lookback_steps,
-    )
-
-    # ✅ FIX 2: use TEST split for test importance (unless you intentionally want val)
-    test_ds = WindowedForecastDataset(
-        df=df,
-        feature_cols=feature_cols,
+        hist_feature_cols=hist_feature_cols,
+        fut_feature_cols=fut_feature_cols,
         target_col=target_col,
         lookback_steps=lookback_steps,
         horizon_steps=horizon_steps,
-        ts=splits["test"],               # <- was splits["val"]
-        x_mean=x_mean,
-        x_std=x_std,
-        scale_y=False,
-        y_mean=y_mean,
-        y_std=y_std,
-        # optional safety check that ts is anchored:
-        anchor_hour=anchor_hour,
-        anchor_minute=anchor_minute,
+        ts=splits["test"],
+        x_hist_mean=xh_mean, x_hist_std=xh_std,
+        x_fut_mean=xf_mean,  x_fut_std=xf_std,
+        scale_y=False, y_mean=y_mean, y_std=y_std,
+        anchor_hour=3, anchor_minute=0,
+        add_time_features_to_future=True,
     )
 
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, drop_last=False)
@@ -193,7 +183,7 @@ def run_xai_permutation(
         )
 
     # load model
-    model = LSTMMultiHorizon(cfg).to(device)
+    model = LSTMMultiHorizonWithFuture(cfg).to(device)
     state = torch.load(str(model_pth_path), map_location=device)
     model.load_state_dict(state)
     model.eval()
