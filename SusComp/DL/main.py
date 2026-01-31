@@ -98,34 +98,53 @@ def test():
 
 def main():
     # Setting features
-    FEATURE_COLS = [ # all these features should be also represented in the SusComp/compute_carbon_intensity.py mapping
-        'Biomass',
-        #'Energy storage',
-        'Fossil Brown coal/Lignite',
-        'Fossil Coal-derived gas',
-        'Fossil Gas',
-        'Fossil Hard coal',
-        'Fossil Oil',
-        #'Fossil Oil shale',
-        #'Fossil Peat',
-        'Geothermal',
-        #'Hydro Pumped Storage',
-        'Hydro Run-of-river and pondage',
-        'Hydro Water Reservoir',
-        #'Marine',
-        'Nuclear',
-        'Other',
-        'Other renewable',
-        'Solar',
-        'Waste',
-        'Wind Offshore',
-        'Wind Onshore',
+    # FEATURE_COLS = [ # all these features should be also represented in the SusComp/compute_carbon_intensity.py mapping
+    #     'Biomass',
+    #     #'Energy storage',
+    #     'Fossil Brown coal/Lignite',
+    #     'Fossil Coal-derived gas',
+    #     'Fossil Gas',
+    #     'Fossil Hard coal',
+    #     'Fossil Oil',
+    #     #'Fossil Oil shale',
+    #     #'Fossil Peat',
+    #     'Geothermal',
+    #     #'Hydro Pumped Storage',
+    #     'Hydro Run-of-river and pondage',
+    #     'Hydro Water Reservoir',
+    #     #'Marine',
+    #     'Nuclear',
+    #     'Other',
+    #     'Other renewable',
+    #     'Solar',
+    #     'Waste',
+    #     'Wind Offshore',
+    #     'Wind Onshore',
+    # ]
+
+    FEATURE_COLS = [
+        'Biomass', 'Energy storage', 'Fossil Brown coal/Lignite',
+        'Fossil Coal-derived gas', 'Fossil Gas', 'Fossil Hard coal',
+        'Fossil Oil', 'Fossil Oil shale', 'Fossil Peat', 'Geothermal',
+        'Hydro Pumped Storage', 'Hydro Run-of-river and pondage',
+        'Hydro Water Reservoir', 'Marine', 'Nuclear', 'Other',
+        'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
+        'total_power_mw', 'emissions_weighted', 'carbon_intensity',
+        'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
+        'wx_mean__cloud_cover (%)', 'wx_mean__wind_speed_100m (km/h)',
+        'wx_mean__wind_direction_100m (°)', 'wx_mean__precipitation (mm)',
+        'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
+        'wx_mean__shortwave_radiation (W/m²)', 'wx_std__temperature_2m (°C)',
+        'wx_std__relative_humidity_2m (%)', 'wx_std__cloud_cover (%)',
+        'wx_std__wind_speed_100m (km/h)', 'wx_std__wind_direction_100m (°)',
+        'wx_std__precipitation (mm)', 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
+        'wx_std__shortwave_radiation (W/m²)'
     ]
 
     TARGET_COL = "carbon_intensity"
 
     # Loading data
-    df = pd.read_csv("../new_data/germany_2325_ci.csv", index_col=0, parse_dates=True)
+    df = pd.read_csv("../new_data/germany_energy_with_weather_CI.csv", index_col=0, parse_dates=True)
     df = df.sort_index()
 
     # Sanity check
@@ -135,11 +154,11 @@ def main():
     cfg = LSTMForecastConfig(
         input_size=len(FEATURE_COLS)+6,  # +6 time encodings
         horizon=24,
-        hidden_size=128,
+        hidden_size=256,
         num_layers=2,
         dropout=0.2,
         bidirectional=False,
-        head_hidden_size=128,
+        head_hidden_size=256,
         head_dropout=0.2,
         use_layernorm=True,
     )
@@ -160,34 +179,53 @@ def main():
 
 def xai():
     # Setting features
-    FEATURE_COLS = [ # all these features should be also represented in the SusComp/compute_carbon_intensity.py mapping
-        'Biomass',
-        #'Energy storage',
-        'Fossil Brown coal/Lignite',
-        'Fossil Coal-derived gas',
-        'Fossil Gas',
-        'Fossil Hard coal',
-        'Fossil Oil',
-        #'Fossil Oil shale',
-        #'Fossil Peat',
-        'Geothermal',
-        #'Hydro Pumped Storage',
-        'Hydro Run-of-river and pondage',
-        'Hydro Water Reservoir',
-        #'Marine',
-        'Nuclear',
-        'Other',
-        'Other renewable',
-        'Solar',
-        'Waste',
-        'Wind Offshore',
-        'Wind Onshore',
+    # FEATURE_COLS = [ # all these features should be also represented in the SusComp/compute_carbon_intensity.py mapping
+    #     'Biomass',
+    #     #'Energy storage',
+    #     'Fossil Brown coal/Lignite',
+    #     'Fossil Coal-derived gas',
+    #     'Fossil Gas',
+    #     'Fossil Hard coal',
+    #     'Fossil Oil',
+    #     #'Fossil Oil shale',
+    #     #'Fossil Peat',
+    #     'Geothermal',
+    #     #'Hydro Pumped Storage',
+    #     'Hydro Run-of-river and pondage',
+    #     'Hydro Water Reservoir',
+    #     #'Marine',
+    #     'Nuclear',
+    #     'Other',
+    #     'Other renewable',
+    #     'Solar',
+    #     'Waste',
+    #     'Wind Offshore',
+    #     'Wind Onshore',
+    # ]
+
+    FEATURE_COLS = [
+        'Biomass', 'Energy storage', 'Fossil Brown coal/Lignite',
+        'Fossil Coal-derived gas', 'Fossil Gas', 'Fossil Hard coal',
+        'Fossil Oil', 'Fossil Oil shale', 'Fossil Peat', 'Geothermal',
+        'Hydro Pumped Storage', 'Hydro Run-of-river and pondage',
+        'Hydro Water Reservoir', 'Marine', 'Nuclear', 'Other',
+        'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
+        'total_power_mw', 'emissions_weighted', 'carbon_intensity',
+        'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
+        'wx_mean__cloud_cover (%)', 'wx_mean__wind_speed_100m (km/h)',
+        'wx_mean__wind_direction_100m (°)', 'wx_mean__precipitation (mm)',
+        'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
+        'wx_mean__shortwave_radiation (W/m²)', 'wx_std__temperature_2m (°C)',
+        'wx_std__relative_humidity_2m (%)', 'wx_std__cloud_cover (%)',
+        'wx_std__wind_speed_100m (km/h)', 'wx_std__wind_direction_100m (°)',
+        'wx_std__precipitation (mm)', 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
+        'wx_std__shortwave_radiation (W/m²)'
     ]
 
     TARGET_COL = "carbon_intensity"
 
     # Loading data
-    df = pd.read_csv("../new_data/germany_2325_ci.csv", index_col=0, parse_dates=True)
+    df = pd.read_csv("../new_data/germany_energy_with_weather_CI.csv", index_col=0, parse_dates=True)
     df = df.sort_index()
 
     # Sanity check
@@ -197,11 +235,11 @@ def xai():
     cfg = LSTMForecastConfig(
         input_size=len(FEATURE_COLS)+6,  # +6 time encodings
         horizon=24,
-        hidden_size=256,
+        hidden_size=128,
         num_layers=2,
         dropout=0.2,
         bidirectional=False,
-        head_hidden_size=256,
+        head_hidden_size=128,
         head_dropout=0.2,
         use_layernorm=True,
     )
@@ -214,7 +252,7 @@ def xai():
         model_pth_path="best_model.pth",
         lookback_steps=30*24,
         horizon_steps=24,
-        batch_size=64,
+        batch_size=16,
         n_repeats=5,
         max_batches=100,
         out_dir="xai",

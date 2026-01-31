@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Sequence, Tuple, Dict, List
+from typing import Optional, Sequence, Tuple, List
 
 import numpy as np
 import pandas as pd
@@ -25,8 +24,13 @@ TIME_FEATURE_NAMES = ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "doy_sin", "
 
 
 @torch.no_grad()
-def _eval_loss(model: nn.Module, loader: DataLoader, loss_fn: nn.Module, device: str,
-               max_batches: Optional[int] = None) -> float:
+def _eval_loss(
+        model: nn.Module,
+        loader: DataLoader,
+        loss_fn: nn.Module,
+        device: str,
+        max_batches: Optional[int] = None,
+) -> float:
     model.eval()
     losses: List[float] = []
     for bi, (x, y) in enumerate(loader):
@@ -56,6 +60,7 @@ def _permutation_importance(
       baseline_loss: float
       mean_delta: (F,) mean(permuted_loss - baseline)
       std_delta:  (F,) std over repeats
+
     Permutes feature f across batch dimension (keeps time dimension intact).
     """
     rng = np.random.default_rng(seed)
@@ -65,17 +70,18 @@ def _permutation_importance(
     mean_delta = np.zeros(n_features, dtype=np.float64)
     std_delta = np.zeros(n_features, dtype=np.float64)
 
-    # For reproducibility across repeats we draw seeds from rng
     repeat_seeds = rng.integers(low=0, high=2**31 - 1, size=n_repeats, dtype=np.int64)
 
     for f in range(n_features):
         deltas = []
         for r in range(n_repeats):
             torch.manual_seed(int(repeat_seeds[r]))  # controls torch.randperm
+
             losses = []
             for bi, (x, y) in enumerate(loader):
                 if max_batches is not None and bi >= max_batches:
                     break
+
                 x = x.to(device)
                 y = y.to(device)
 
@@ -108,13 +114,15 @@ def run_xai_permutation(
         batch_size: int = 64,
         device: str = "cuda" if torch.cuda.is_available() else "cpu",
         n_repeats: int = 5,
-        max_batches: Optional[int] = 100,  # speed/variance tradeoff; set None for full test
+        max_batches: Optional[int] = 100,
         seed: int = 42,
         out_dir: str | Path = "xai",
         make_plot: bool = True,
+        anchor_hour: int = 3,
+        anchor_minute: int = 0,
 ) -> pd.DataFrame:
     """
-    Standalone permutation importance runner consistent with your training pipeline.
+    Permutation importance runner consistent with the anchored (03:00) dataset pipeline.
 
     Produces a dataframe with:
       feature, importance_mean (Δloss), importance_std, baseline_loss
@@ -126,40 +134,55 @@ def run_xai_permutation(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
+    feature_cols = list(feature_cols)
+
     # sanity checks
-    missing = [c for c in list(feature_cols) + [target_col] if c not in df.columns]
+    missing = [c for c in feature_cols + [target_col] if c not in df.columns]
     if missing:
         raise ValueError(f"Missing columns in df: {missing}")
     if not isinstance(df.index, pd.DatetimeIndex):
-        raise ValueError("df.index must be a DatetimeIndex (your dataset expects this).")
+        raise ValueError("df.index must be a DatetimeIndex.")
 
-    # splits + scalers (same as training)
-    splits = anchored_train_val_test_split_indices(len(df), lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
-    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
-        df, list(feature_cols), target_col, splits["train"], lookback_steps
+    # ✅ FIX 1: call split with df, not len(df)
+    splits = anchored_train_val_test_split_indices(
+        df=df,
+        lookback_steps=lookback_steps,
+        horizon_steps=horizon_steps,
+        anchor_hour=anchor_hour,
+        anchor_minute=anchor_minute,
     )
 
-    # build test dataset + loader
+    # scalers from TRAIN ts only
+    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
+        df=df,
+        feature_cols=feature_cols,
+        target_col=target_col,
+        train_ts=splits["train"],
+        lookback_steps=lookback_steps,
+    )
+
+    # ✅ FIX 2: use TEST split for test importance (unless you intentionally want val)
     test_ds = WindowedForecastDataset(
         df=df,
-        feature_cols=list(feature_cols),
+        feature_cols=feature_cols,
         target_col=target_col,
         lookback_steps=lookback_steps,
         horizon_steps=horizon_steps,
-        start_t=splits["test"][0],
-        end_t=splits["test"][1],
+        ts=splits["test"],               # <- was splits["val"]
         x_mean=x_mean,
         x_std=x_std,
         scale_y=False,
         y_mean=y_mean,
         y_std=y_std,
-        anchor_hour=3,
-        anchor_minute=0
+        # optional safety check that ts is anchored:
+        anchor_hour=anchor_hour,
+        anchor_minute=anchor_minute,
     )
-    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
+
+    test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, drop_last=False)
 
     # feature names as seen by the model input
-    feature_names = list(feature_cols) + TIME_FEATURE_NAMES
+    feature_names = feature_cols + TIME_FEATURE_NAMES
     n_input_features = len(feature_names)
 
     # Optional: consistency check vs cfg
@@ -207,10 +230,12 @@ def run_xai_permutation(
     print("\nTop features (higher Δloss = more important):")
     for i in range(min(15, len(res))):
         r = res.iloc[i]
-        print(f"{i+1:02d}. {r['feature']:<20s}  Δloss={r['importance_mean_delta_loss']:+.6f}  ±{r['importance_std_delta_loss']:.6f}")
+        print(
+            f"{i+1:02d}. {r['feature']:<20s}  "
+            f"Δloss={r['importance_mean_delta_loss']:+.6f}  ±{r['importance_std_delta_loss']:.6f}"
+        )
 
     if make_plot:
-        # simple bar plot of top-k
         top_k = min(20, len(res))
         plt.figure(figsize=(10, 6))
         plt.barh(
@@ -227,19 +252,3 @@ def run_xai_permutation(
         print(f"Saved: {fig_path}")
 
     return res
-
-
-# Example usage:
-# res = run_xai_permutation(
-#     df=df,
-#     feature_cols=feature_cols,
-#     target_col=target_col,
-#     cfg=cfg,
-#     model_pth_path="best_model.pth",
-#     lookback_steps=30*24,
-#     horizon_steps=24,
-#     batch_size=64,
-#     n_repeats=5,
-#     max_batches=100,
-#     out_dir="xai",
-# )

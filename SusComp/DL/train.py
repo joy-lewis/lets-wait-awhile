@@ -109,6 +109,9 @@ def run_training(
         model.train()
         train_losses = []
         for x, y in train_loader:
+
+            if epoch==1:
+                print(f"x shape: {x.shape}, y shape: {y.shape}")
             x = x.to(device)
             y = y.to(device)
 

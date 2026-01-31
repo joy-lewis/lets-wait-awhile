@@ -56,7 +56,7 @@ def add_carbon_intensity(df):
     df['carbon_intensity'] = np.where(
         df['total_power_mw'] > 0,
         df['emissions_weighted'] / df['total_power_mw'],
-        np.nan
+        0
     )
 
     return df
@@ -64,12 +64,12 @@ def add_carbon_intensity(df):
 
 if __name__ == "__main__":
     # Example usage
-    df = pd.read_csv("new_data/germany_2325_generation.csv")
-    df["Time"] = pd.to_datetime(df["Time"])
-    df = df.set_index("Time").sort_index()
+    df = pd.read_csv("new_data/germany_energy_with_weather.csv")
+    df["time"] = pd.to_datetime(df["time"])
+    df = df.set_index("time").sort_index()
 
     df_ci = add_carbon_intensity(df)
     print(df_ci[['carbon_intensity']].head())
 
-    df_ci.to_csv("new_data/germany_2325_ci.csv")
+    df_ci.to_csv("new_data/germany_energy_with_weather_CI.csv")
 
