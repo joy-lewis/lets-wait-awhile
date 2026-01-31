@@ -172,7 +172,7 @@ def run_xai_permutation(
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False, drop_last=False)
 
     # feature names as seen by the model input
-    feature_names = feature_cols + TIME_FEATURE_NAMES
+    feature_names = hist_feature_cols + TIME_FEATURE_NAMES
     n_input_features = len(feature_names)
 
     # Optional: consistency check vs cfg
