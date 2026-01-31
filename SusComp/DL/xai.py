@@ -14,8 +14,8 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 
 from training_data_builder import (
-    train_val_test_split_indices,
-    compute_scalers,
+    anchored_train_val_test_split_indices,
+    compute_scalers_from_ts,
     WindowedForecastDataset,
 )
 from models import LSTMMultiHorizon
@@ -134,8 +134,8 @@ def run_xai_permutation(
         raise ValueError("df.index must be a DatetimeIndex (your dataset expects this).")
 
     # splits + scalers (same as training)
-    splits = train_val_test_split_indices(len(df), lookback_steps, horizon_steps)
-    x_mean, x_std, y_mean, y_std = compute_scalers(
+    splits = anchored_train_val_test_split_indices(len(df), lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
+    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
         df, list(feature_cols), target_col, splits["train"], lookback_steps
     )
 
@@ -153,6 +153,8 @@ def run_xai_permutation(
         scale_y=False,
         y_mean=y_mean,
         y_std=y_std,
+        anchor_hour=3,
+        anchor_minute=0
     )
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 

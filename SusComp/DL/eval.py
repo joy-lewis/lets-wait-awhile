@@ -14,10 +14,13 @@ def plot_random_test_forecasts(
         seed: int = 42,
         out_dir: str = "plots",
         show: bool = False,
+        anchor_hour: int = 3,
+        anchor_minute: int = 0,
+        strict_anchor_check: bool = True,
 ) -> None:
     """
-    Plots n random 24-horizon forecasts vs ground truth from the test set.
-    Saves figures to out_dir as PNGs.
+    Plots n random forecasts vs ground truth from the test set.
+    Enforces that forecast start time is anchored (default 03:00).
     """
     rng = np.random.default_rng(seed)
     n = min(n, len(test_ds))
@@ -27,25 +30,47 @@ def plot_random_test_forecasts(
 
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
+    # Optional: verify the dataset is anchored
+    if strict_anchor_check:
+        if not hasattr(test_ds, "ts"):
+            raise ValueError("test_ds has no attribute `ts`. Cannot verify anchored start times.")
+        ts = np.asarray(test_ds.ts, dtype=np.int64)
+        if ts.size == 0:
+            raise ValueError("test_ds.ts is empty.")
+        times = df.index[ts]
+        ok = (times.hour == anchor_hour) & (times.minute == anchor_minute)
+        if not bool(np.all(ok)):
+            bad = times[~ok][:5]
+            raise ValueError(
+                f"test_ds contains non-anchored start times. "
+                f"Expected {anchor_hour:02d}:{anchor_minute:02d}. Examples: {list(bad)}"
+            )
+
     model.eval()
     idxs = rng.choice(len(test_ds), size=n, replace=False)
 
     for k, ds_idx in enumerate(idxs):
-        x, y = test_ds[ds_idx]                  # x: (L, F), y: (H,)
-        t = int(test_ds.ts[ds_idx])             # forecast start index in df (iloc index)
+        x, y = test_ds[ds_idx]              # x: (L, F), y: (H,)
+        t = int(test_ds.ts[ds_idx])         # forecast start iloc index in df
 
-        # Build horizon datetime index for the plot
-        horizon_len = y.shape[0]
+        horizon_len = int(y.shape[0])
         horizon_times = df.index[t : t + horizon_len]
 
-        # Predict
+        # Extra per-sample guard (useful even if strict_anchor_check=False)
+        if strict_anchor_check:
+            start_dt = horizon_times[0]
+            if not (start_dt.hour == anchor_hour and start_dt.minute == anchor_minute):
+                raise ValueError(
+                    f"Sample start time is not anchored: start={start_dt} "
+                    f"(expected {anchor_hour:02d}:{anchor_minute:02d})"
+                )
+
         with torch.no_grad():
-            x_in = x.unsqueeze(0).to(device)    # (1, L, F)
-            y_hat = model(x_in).squeeze(0).detach().cpu().numpy()  # (H,)
+            x_in = x.unsqueeze(0).to(device)   # (1, L, F)
+            y_hat = model(x_in).squeeze(0).detach().cpu().numpy()
 
         y_true = y.detach().cpu().numpy()
 
-        # Plot
         plt.figure()
         plt.plot(horizon_times, y_true, label="Ground truth")
         plt.plot(horizon_times, y_hat, label="Prediction")
@@ -68,6 +93,7 @@ def plot_random_test_forecasts(
 def plot_loss(
         train_losses,
         val_losses,
+        test_loss,
         out_path: str = "plots/loss_curve.png",
         title: str = "Training & Validation Loss",
         show: bool = False,
@@ -84,6 +110,8 @@ def plot_loss(
 
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    title = f"{title}, Test loss: {test_loss:.5f}"
 
     plt.figure()
     plt.plot(epochs, list(train_losses)[:n], label="Train loss")

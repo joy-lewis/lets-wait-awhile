@@ -1,4 +1,4 @@
-from training_data_builder import train_val_test_split_indices, compute_scalers, WindowedForecastDataset
+from training_data_builder import anchored_train_val_test_split_indices, compute_scalers_from_ts, WindowedForecastDataset
 from models import LSTMMultiHorizon
 import math
 import torch
@@ -41,33 +41,35 @@ def run_training(
     if missing:
         raise ValueError(f"Missing columns in df: {missing}")
 
-    splits = train_val_test_split_indices(len(df), lookback_steps, horizon_steps)
+    splits = anchored_train_val_test_split_indices(df, lookback_steps, horizon_steps, anchor_hour=3, anchor_minute=0)
 
-    x_mean, x_std, y_mean, y_std = compute_scalers(
-        df, feature_cols, target_col, splits["train"], lookback_steps
-    )
+    x_mean, x_std, y_mean, y_std = compute_scalers_from_ts(
+    df, feature_cols, target_col, splits["train"], lookback_steps)
 
     # Datasets
     train_ds = WindowedForecastDataset(
         df=df, feature_cols=feature_cols, target_col=target_col,
         lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        start_t=splits["train"][0], end_t=splits["train"][1],
         x_mean=x_mean, x_std=x_std,
-        scale_y=False, y_mean=y_mean, y_std=y_std
+        scale_y=False, y_mean=y_mean, y_std=y_std,
+        anchor_hour=3, anchor_minute=0,
+        ts=splits["train"]
     )
     val_ds = WindowedForecastDataset(
         df=df, feature_cols=feature_cols, target_col=target_col,
         lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        start_t=splits["val"][0], end_t=splits["val"][1],
         x_mean=x_mean, x_std=x_std,
-        scale_y=False, y_mean=y_mean, y_std=y_std
+        scale_y=False, y_mean=y_mean, y_std=y_std,
+        anchor_hour=3, anchor_minute=0,
+        ts=splits["val"]
     )
     test_ds = WindowedForecastDataset(
         df=df, feature_cols=feature_cols, target_col=target_col,
         lookback_steps=lookback_steps, horizon_steps=horizon_steps,
-        start_t=splits["test"][0], end_t=splits["test"][1],
         x_mean=x_mean, x_std=x_std,
-        scale_y=False, y_mean=y_mean, y_std=y_std
+        scale_y=False, y_mean=y_mean, y_std=y_std,
+        anchor_hour=3, anchor_minute=0,
+        ts=splits["val"]
     )
 
     # DataLoaders
@@ -75,8 +77,8 @@ def run_training(
     val_loader = DataLoader(val_ds, batch_size=batch_size, shuffle=False)
     test_loader = DataLoader(test_ds, batch_size=batch_size, shuffle=False)
 
-    print(f"Number of training samples: {len(train_loader)} with batch size: {batch_size}")
-    print(f"Number of validation samples: {len(val_loader)} with batch size: {batch_size}")
+    print("train samples:", len(train_ds), "val samples:", len(val_ds), "test samples:", len(test_ds))
+    print("train batches:", len(train_loader), "val batches:", len(val_loader))
 
     # Model
     model = LSTMMultiHorizon(cfg).to(device)
@@ -160,9 +162,11 @@ def run_training(
         seed=42,
         out_dir="plots",
         show=False,
+        anchor_hour=3,
+        anchor_minute=0
     )
 
-    plot_loss(train_loss_list, val_loss_list)
+    plot_loss(train_loss_list, val_loss_list, test_loss)
 
 if __name__ == "__main__":
     pass

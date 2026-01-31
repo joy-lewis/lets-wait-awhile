@@ -135,11 +135,11 @@ def main():
     cfg = LSTMForecastConfig(
         input_size=len(FEATURE_COLS)+6,  # +6 time encodings
         horizon=24,
-        hidden_size=256,
+        hidden_size=128,
         num_layers=2,
         dropout=0.2,
         bidirectional=False,
-        head_hidden_size=256,
+        head_hidden_size=128,
         head_dropout=0.2,
         use_layernorm=True,
     )
@@ -151,9 +151,9 @@ def main():
         target_col=TARGET_COL,
         lookback_steps=30*24,
         horizon_steps=24,      # set None to infer; use "H" if your data is hourly
-        batch_size=64,
+        batch_size=16,
         lr=0.0012,
-        epochs=50,
+        epochs=100,
         device="cuda" if torch.cuda.is_available() else "cpu",
         cfg=cfg,
     )
@@ -222,5 +222,5 @@ def xai():
 
 if __name__ == "__main__":
     #test()
-    #main()
-    xai()
+    main()
+    #xai()
