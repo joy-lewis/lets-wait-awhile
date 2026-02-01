@@ -137,14 +137,13 @@ def time_features_from_datetime_parts(hour: torch.Tensor, dow: torch.Tensor, doy
 #
 
 
-class WindowedForecastDatasetWithFuture(Dataset):
-    """
-    Returns:
-      x_hist: (L, F_hist + 6)   [numeric hist features + time features]
-      x_fut:  (H, F_fut + 6)    [numeric future covariates + time features]  (optional time features)
-      y:      (H,)
-    """
+from typing import Tuple
+import numpy as np
+import torch
+from torch.utils.data import Dataset
+import pandas as pd
 
+class WindowedForecastDatasetWithFuture(Dataset):
     def __init__(
             self,
             df: pd.DataFrame,
@@ -161,9 +160,10 @@ class WindowedForecastDatasetWithFuture(Dataset):
             scale_y: bool = False,
             y_mean: float = 0.0,
             y_std: float = 1.0,
-            anchor_hour: int | None = 3,      # optional check
+            anchor_hour: int | None = 3,
             anchor_minute: int = 0,
             add_time_features_to_future: bool = True,
+            zero_future: bool = False,   # <- recommend default False
     ):
         assert isinstance(df.index, pd.DatetimeIndex), "df.index must be a DatetimeIndex"
         self.df = df
@@ -202,7 +202,10 @@ class WindowedForecastDatasetWithFuture(Dataset):
         self.y_mean = float(y_mean)
         self.y_std = float(y_std if y_std != 0 else 1.0)
 
+        self.zero_future = bool(zero_future)
         self.add_time_features_to_future = bool(add_time_features_to_future)
+
+        self.fut_feat_dim = len(self.fut_feature_cols) + (6 if self.add_time_features_to_future else 0)
 
     def __len__(self) -> int:
         return len(self.ts)
@@ -215,37 +218,39 @@ class WindowedForecastDatasetWithFuture(Dataset):
         xh_num = hist[self.hist_feature_cols].to_numpy(dtype=np.float32)
         xh_num = (xh_num - self.x_hist_mean) / self.x_hist_std
 
-        # time features for history
         dt = hist.index
         hour = torch.from_numpy(dt.hour.to_numpy(dtype=np.int64))
         dow  = torch.from_numpy(dt.dayofweek.to_numpy(dtype=np.int64))
         doy  = torch.from_numpy(dt.dayofyear.to_numpy(dtype=np.int64))
         xh_time = time_features_from_datetime_parts(hour, dow, doy).numpy().astype(np.float32)
 
-        x_hist = np.concatenate([xh_num, xh_time], axis=-1)  # (L, F_hist+6)
+        x_hist = np.concatenate([xh_num, xh_time], axis=-1)
 
-        # ----- future covariates (forecast weather) -----
-        fut = self.df.iloc[t : t + self.horizon_steps]
-        xf_num = fut[self.fut_feature_cols].to_numpy(dtype=np.float32)
-        xf_num = (xf_num - self.x_fut_mean) / self.x_fut_std
-
-        if self.add_time_features_to_future:
-            dtf = fut.index
-            hour_f = torch.from_numpy(dtf.hour.to_numpy(dtype=np.int64))
-            dow_f  = torch.from_numpy(dtf.dayofweek.to_numpy(dtype=np.int64))
-            doy_f  = torch.from_numpy(dtf.dayofyear.to_numpy(dtype=np.int64))
-            xf_time = time_features_from_datetime_parts(hour_f, dow_f, doy_f).numpy().astype(np.float32)
-            x_fut = np.concatenate([xf_num, xf_time], axis=-1)  # (H, F_fut+6)
+        # ----- future covariates -----
+        if self.zero_future:
+            x_fut = np.zeros((self.horizon_steps, self.fut_feat_dim), dtype=np.float32)
+            fut_target = self.df.iloc[t : t + self.horizon_steps]  # for y only
         else:
-            x_fut = xf_num  # (H, F_fut)
+            fut_target = self.df.iloc[t : t + self.horizon_steps]
+            xf_num = fut_target[self.fut_feature_cols].to_numpy(dtype=np.float32)
+            xf_num = (xf_num - self.x_fut_mean) / self.x_fut_std
+
+            if self.add_time_features_to_future:
+                dtf = fut_target.index
+                hour_f = torch.from_numpy(dtf.hour.to_numpy(dtype=np.int64))
+                dow_f  = torch.from_numpy(dtf.dayofweek.to_numpy(dtype=np.int64))
+                doy_f  = torch.from_numpy(dtf.dayofyear.to_numpy(dtype=np.int64))
+                xf_time = time_features_from_datetime_parts(hour_f, dow_f, doy_f).numpy().astype(np.float32)
+                x_fut = np.concatenate([xf_num, xf_time], axis=-1)
+            else:
+                x_fut = xf_num
 
         # ----- target -----
-        y = fut[self.target_col].to_numpy(dtype=np.float32)  # (H,)
+        y = fut_target[self.target_col].to_numpy(dtype=np.float32)
         if self.scale_y:
             y = (y - self.y_mean) / self.y_std
 
         return torch.from_numpy(x_hist), torch.from_numpy(x_fut), torch.from_numpy(y)
-
 
 #Utilities: frequency, splits, scaling
 def infer_base_freq(index: pd.DatetimeIndex) -> pd.Timedelta:

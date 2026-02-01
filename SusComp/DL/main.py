@@ -317,5 +317,5 @@ def xai():
 
 if __name__ == "__main__":
     #test()
-    #main()
-    xai()
+    main()
+    #xai()

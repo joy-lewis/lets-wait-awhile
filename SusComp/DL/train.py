@@ -25,6 +25,7 @@ def run_training(
     epochs: int = 10,
     device: str = "cuda" if torch.cuda.is_available() else "cpu",
     cfg=None,
+    zero_future=True
 ):
 
     # Make sure required columns exist
@@ -63,6 +64,7 @@ def run_training(
         scale_y=False, y_mean=y_mean, y_std=y_std,
         anchor_hour=3, anchor_minute=0,
         add_time_features_to_future=True,
+        zero_future=zero_future,
     )
 
     val_ds = WindowedForecastDatasetWithFuture(
@@ -78,6 +80,7 @@ def run_training(
         scale_y=False, y_mean=y_mean, y_std=y_std,
         anchor_hour=3, anchor_minute=0,
         add_time_features_to_future=True,
+        zero_future=zero_future,
     )
 
     test_ds = WindowedForecastDatasetWithFuture(
@@ -93,6 +96,7 @@ def run_training(
         scale_y=False, y_mean=y_mean, y_std=y_std,
         anchor_hour=3, anchor_minute=0,
         add_time_features_to_future=True,
+        zero_future=zero_future,
     )
 
     # DataLoaders
@@ -137,6 +141,8 @@ def run_training(
         for x_hist, x_fut, y in train_loader:
             if epoch==1:
                 print(f"x_hist shape: {x_hist.shape}, x_fut shape: {x_fut.shape} y shape: {y.shape}")
+                if zero_future:
+                    assert torch.all(x_fut == 0), "x_fut is not all zeros!"
             x_hist = x_hist.to(device)
             x_fut  = x_fut.to(device)
             y      = y.to(device)
