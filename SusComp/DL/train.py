@@ -1,5 +1,5 @@
 from training_data_builder import anchored_train_val_test_split_indices, compute_scalers_hist_and_fut, WindowedForecastDatasetWithFuture
-from models import LSTMMultiHorizonWithFuture
+from models import LSTMMultiHorizon
 import math
 import torch
 import torch.nn as nn
@@ -108,7 +108,7 @@ def run_training(
     print("train batches:", len(train_loader), "val batches:", len(val_loader))
 
     # Model
-    model = LSTMMultiHorizonWithFuture(cfg).to(device)
+    model = LSTMMultiHorizon(cfg).to(device)
     print(model)
 
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
@@ -122,10 +122,9 @@ def run_training(
         with torch.no_grad():
             for xv_hist, xv_fut, yv in loader:
                 xv_hist = xv_hist.to(device)
-                xv_fut  = xv_fut.to(device)
                 yv      = yv.to(device)
 
-                yv_hat = model(xv_hist, xv_fut)
+                yv_hat = model(xv_hist)
                 loss_v = loss_fn(yv_hat, yv)
                 losses.append(loss_v.item())
         return float(np.mean(losses)) if losses else float("nan")
@@ -141,14 +140,11 @@ def run_training(
         for x_hist, x_fut, y in train_loader:
             if epoch==1:
                 print(f"x_hist shape: {x_hist.shape}, x_fut shape: {x_fut.shape} y shape: {y.shape}")
-                if zero_future:
-                    assert torch.all(x_fut == 0), "x_fut is not all zeros!"
             x_hist = x_hist.to(device)
-            x_fut  = x_fut.to(device)
             y      = y.to(device)
 
             optimizer.zero_grad(set_to_none=True)
-            y_hat = model(x_hist, x_fut)
+            y_hat = model(x_hist)
             loss = loss_fn(y_hat, y)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)

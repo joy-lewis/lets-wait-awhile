@@ -17,7 +17,7 @@ from training_data_builder import (
     compute_scalers_hist_and_fut,
     WindowedForecastDatasetWithFuture,
 )
-from models import LSTMMultiHorizonWithFuture
+from models import LSTMMultiHorizon
 
 
 TIME_FEATURE_NAMES = ["hour_sin", "hour_cos", "dow_sin", "dow_cos", "doy_sin", "doy_cos"]
@@ -37,10 +37,9 @@ def _eval_loss(
         if max_batches is not None and bi >= max_batches:
             break
         x_hist = x_hist.to(device)
-        x_fut  = x_fut.to(device)
         y      = y.to(device)
 
-        y_hat = model(x_hist, x_fut)
+        y_hat = model(x_hist)
         loss = loss_fn(y_hat, y)
         losses.append(float(loss.item()))
     return float(np.mean(losses)) if losses else float("nan")
@@ -92,7 +91,7 @@ def _permutation_importance(
                 x_perm = x_hist.clone()
                 x_perm[:, :, f] = x_hist[perm, :, f]
 
-                y_hat = model(x_perm, x_fut)
+                y_hat = model(x_perm)
                 loss = loss_fn(y_hat, y)
                 losses.append(float(loss.item()))
 
@@ -183,7 +182,7 @@ def run_xai_permutation(
         )
 
     # load model
-    model = LSTMMultiHorizonWithFuture(cfg).to(device)
+    model = LSTMMultiHorizon(cfg).to(device)
     state = torch.load(str(model_pth_path), map_location=device)
     model.load_state_dict(state)
     model.eval()

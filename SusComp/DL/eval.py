@@ -67,8 +67,7 @@ def plot_random_test_forecasts(
 
         with torch.no_grad():
             x_hist_in = x_hist.unsqueeze(0).to(device)   # (1, L, F)
-            x_fut_in = x_fut.unsqueeze(0).to(device)
-            y_hat = model(x_hist_in, x_fut_in).squeeze(0).detach().cpu().numpy()
+            y_hat = model(x_hist_in).squeeze(0).detach().cpu().numpy()
 
         y_true = y.detach().cpu().numpy()
 
