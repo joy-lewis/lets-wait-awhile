@@ -1,0 +1,238 @@
+/home/joy/anaconda3/envs/bw310/bin/python /home/joy/git_projects/lets-wait-awhile/SusComp/DL/main.py
+NaNs found in required columns:
+Biomass                           3
+Fossil Brown coal/Lignite         3
+Fossil Coal-derived gas           3
+Fossil Gas                        3
+Fossil Hard coal                  3
+Fossil Oil                        3
+Geothermal                        3
+Hydro Run-of-river and pondage    3
+Hydro Water Reservoir             3
+Nuclear                           3
+Dropped rows with NaNs in required columns. New row count: 26301
+✅ sanity_check passed | rows=26301 | range=2023-01-01 00:00:00 → 2025-12-31 23:00:00 | freq=h
+Training started with config:
+hist_feature_cols: ['Biomass', 'Fossil Brown coal/Lignite', 'Fossil Coal-derived gas', 'Fossil Gas', 'Fossil Hard coal', 'Fossil Oil', 'Geothermal', 'Hydro Run-of-river and pondage', 'Hydro Water Reservoir', 'Nuclear', 'Other', 'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore', 'total_power_mw', 'emissions_weighted', 'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)', 'wx_mean__cloud_cover (%)', 'wx_mean__wind_speed_100m (km/h)', 'wx_mean__wind_direction_100m (°)', 'wx_mean__precipitation (mm)', 'wx_mean__soil_moisture_0_to_7cm (m³/m³)', 'wx_mean__shortwave_radiation (W/m²)', 'wx_std__temperature_2m (°C)', 'wx_std__relative_humidity_2m (%)', 'wx_std__cloud_cover (%)', 'wx_std__wind_speed_100m (km/h)', 'wx_std__wind_direction_100m (°)', 'wx_std__precipitation (mm)', 'wx_std__soil_moisture_0_to_7cm (m³/m³)', 'wx_std__shortwave_radiation (W/m²)']
+fut_feature_cols: ['wxf__wx_mean__temperature_2m (°C)', 'wxf__wx_mean__relative_humidity_2m (%)', 'wxf__wx_mean__cloud_cover (%)', 'wxf__wx_mean__wind_speed_120m (km/h)', 'wxf__wx_mean__wind_direction_120m (°)', 'wxf__wx_mean__precipitation (mm)', 'wxf__wx_mean__soil_moisture_1_to_3cm (m³/m³)', 'wxf__wx_mean__shortwave_radiation (W/m²)', 'wxf__wx_std__temperature_2m (°C)', 'wxf__wx_std__relative_humidity_2m (%)', 'wxf__wx_std__cloud_cover (%)', 'wxf__wx_std__wind_speed_120m (km/h)', 'wxf__wx_std__wind_direction_120m (°)', 'wxf__wx_std__precipitation (mm)', 'wxf__wx_std__soil_moisture_1_to_3cm (m³/m³)', 'wxf__wx_std__shortwave_radiation (W/m²)']
+target_col: carbon_intensity
+lookback_steps: 720
+horizon_steps: 24
+batch_size: 16
+lr: 0.0012
+epochs: 150
+device: cuda
+
+train samples: 745 val samples: 159 test samples: 161
+train batches: 46 val batches: 10
+LSTMMultiHorizon(
+  (lstm): LSTM(40, 1024, num_layers=2, batch_first=True, dropout=0.15)
+  (norm): LayerNorm((1024,), eps=1e-05, elementwise_affine=True)
+  (head): Sequential(
+    (0): Linear(in_features=1024, out_features=1024, bias=True)
+    (1): ReLU()
+    (2): Dropout(p=0.15, inplace=False)
+    (3): Linear(in_features=1024, out_features=24, bias=True)
+  )
+)
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+x_hist shape: torch.Size([16, 720, 40]), x_fut shape: torch.Size([16, 24, 22]) y shape: torch.Size([16, 24])
+🎉NEW BEST - Epoch: 1 | train_loss=183.87086 | val_loss=105.88905 | lr: 0.00119
+Epoch: 2 | train_loss=107.11663 | val_loss=112.66719 | lr: 0.00114
+Epoch: 3 | train_loss=127.29687 | val_loss=125.54332 | lr: 0.00107
+Epoch: 4 | train_loss=112.95466 | val_loss=108.59868 | lr: 0.00098
+🎉NEW BEST - Epoch: 5 | train_loss=99.94088 | val_loss=92.85174 | lr: 0.00087
+🎉NEW BEST - Epoch: 6 | train_loss=77.78397 | val_loss=87.75548 | lr: 0.00075
+Epoch: 7 | train_loss=71.35930 | val_loss=89.81704 | lr: 0.00063
+🎉NEW BEST - Epoch: 8 | train_loss=69.46568 | val_loss=75.74611 | lr: 0.00050
+Epoch: 9 | train_loss=67.28561 | val_loss=77.98394 | lr: 0.00038
+Epoch: 10 | train_loss=65.09829 | val_loss=80.58401 | lr: 0.00027
+Epoch: 11 | train_loss=64.18349 | val_loss=77.11502 | lr: 0.00018
+Epoch: 12 | train_loss=64.11027 | val_loss=79.63314 | lr: 0.00011
+Epoch: 13 | train_loss=63.39519 | val_loss=81.30688 | lr: 0.00006
+Epoch: 14 | train_loss=62.44056 | val_loss=77.56633 | lr: 0.00005
+Epoch: 15 | train_loss=62.71882 | val_loss=78.37100 | lr: 0.00006
+Epoch: 16 | train_loss=62.77267 | val_loss=78.69094 | lr: 0.00011
+Epoch: 17 | train_loss=62.82135 | val_loss=78.15335 | lr: 0.00018
+Epoch: 18 | train_loss=62.77712 | val_loss=78.10007 | lr: 0.00027
+Epoch: 19 | train_loss=62.83227 | val_loss=80.18032 | lr: 0.00038
+Epoch: 20 | train_loss=64.13938 | val_loss=77.08087 | lr: 0.00050
+Epoch: 21 | train_loss=63.71048 | val_loss=78.68338 | lr: 0.00063
+Epoch: 22 | train_loss=64.63652 | val_loss=83.32943 | lr: 0.00075
+Epoch: 23 | train_loss=65.22757 | val_loss=83.04225 | lr: 0.00087
+Epoch: 24 | train_loss=66.66722 | val_loss=76.07382 | lr: 0.00098
+Epoch: 25 | train_loss=65.79101 | val_loss=77.26947 | lr: 0.00107
+Epoch: 26 | train_loss=64.98655 | val_loss=76.73402 | lr: 0.00114
+🎉NEW BEST - Epoch: 27 | train_loss=65.57695 | val_loss=69.94627 | lr: 0.00119
+Epoch: 28 | train_loss=63.58454 | val_loss=71.81039 | lr: 0.00120
+Epoch: 29 | train_loss=62.53638 | val_loss=75.77992 | lr: 0.00119
+🎉NEW BEST - Epoch: 30 | train_loss=60.06334 | val_loss=69.16127 | lr: 0.00114
+🎉NEW BEST - Epoch: 31 | train_loss=57.74568 | val_loss=63.99736 | lr: 0.00107
+Epoch: 32 | train_loss=58.02007 | val_loss=66.65757 | lr: 0.00098
+Epoch: 33 | train_loss=56.74543 | val_loss=64.51998 | lr: 0.00087
+Epoch: 34 | train_loss=54.44120 | val_loss=68.00665 | lr: 0.00075
+🎉NEW BEST - Epoch: 35 | train_loss=54.65291 | val_loss=63.50218 | lr: 0.00063
+🎉NEW BEST - Epoch: 36 | train_loss=51.95581 | val_loss=62.44361 | lr: 0.00050
+Epoch: 37 | train_loss=50.28479 | val_loss=70.88452 | lr: 0.00038
+Epoch: 38 | train_loss=49.09916 | val_loss=62.74519 | lr: 0.00027
+Epoch: 39 | train_loss=46.86636 | val_loss=64.61445 | lr: 0.00018
+Epoch: 40 | train_loss=45.97289 | val_loss=65.49734 | lr: 0.00011
+Epoch: 41 | train_loss=45.39171 | val_loss=63.36318 | lr: 0.00006
+Epoch: 42 | train_loss=44.44251 | val_loss=62.63829 | lr: 0.00005
+Epoch: 43 | train_loss=43.77095 | val_loss=63.44717 | lr: 0.00006
+Epoch: 44 | train_loss=44.18771 | val_loss=63.22319 | lr: 0.00011
+Epoch: 45 | train_loss=44.00209 | val_loss=63.44383 | lr: 0.00018
+Epoch: 46 | train_loss=44.15630 | val_loss=64.82540 | lr: 0.00027
+Epoch: 47 | train_loss=44.04244 | val_loss=67.01613 | lr: 0.00038
+Epoch: 48 | train_loss=45.06955 | val_loss=66.09658 | lr: 0.00050
+Epoch: 49 | train_loss=45.83718 | val_loss=64.37795 | lr: 0.00063
+Epoch: 50 | train_loss=46.24038 | val_loss=67.61219 | lr: 0.00075
+🎉NEW BEST - Epoch: 51 | train_loss=47.27044 | val_loss=62.28471 | lr: 0.00087
+Epoch: 52 | train_loss=48.16435 | val_loss=72.52298 | lr: 0.00098
+Epoch: 53 | train_loss=48.71041 | val_loss=64.72619 | lr: 0.00107
+Epoch: 54 | train_loss=48.83637 | val_loss=64.10189 | lr: 0.00114
+Epoch: 55 | train_loss=48.51629 | val_loss=68.51889 | lr: 0.00119
+Epoch: 56 | train_loss=47.25151 | val_loss=68.99246 | lr: 0.00120
+Epoch: 57 | train_loss=47.99488 | val_loss=63.20413 | lr: 0.00119
+Epoch: 58 | train_loss=49.05687 | val_loss=71.33791 | lr: 0.00114
+Epoch: 59 | train_loss=46.95394 | val_loss=66.39012 | lr: 0.00107
+Epoch: 60 | train_loss=46.57575 | val_loss=73.10479 | lr: 0.00098
+Epoch: 61 | train_loss=45.12306 | val_loss=67.87294 | lr: 0.00087
+Epoch: 62 | train_loss=43.60957 | val_loss=77.21681 | lr: 0.00075
+Epoch: 63 | train_loss=42.85224 | val_loss=69.31501 | lr: 0.00063
+Epoch: 64 | train_loss=40.92961 | val_loss=68.24221 | lr: 0.00050
+Epoch: 65 | train_loss=39.78387 | val_loss=69.26418 | lr: 0.00038
+Epoch: 66 | train_loss=36.31498 | val_loss=66.20972 | lr: 0.00027
+Epoch: 67 | train_loss=35.06269 | val_loss=68.55840 | lr: 0.00018
+Epoch: 68 | train_loss=33.82015 | val_loss=68.46519 | lr: 0.00011
+Epoch: 69 | train_loss=32.64964 | val_loss=69.02284 | lr: 0.00006
+Epoch: 70 | train_loss=32.75405 | val_loss=67.97870 | lr: 0.00005
+Epoch: 71 | train_loss=31.93513 | val_loss=67.72816 | lr: 0.00006
+Epoch: 72 | train_loss=31.77070 | val_loss=68.05014 | lr: 0.00011
+Epoch: 73 | train_loss=31.61607 | val_loss=67.00282 | lr: 0.00018
+Epoch: 74 | train_loss=31.76958 | val_loss=67.89360 | lr: 0.00027
+Epoch: 75 | train_loss=32.22838 | val_loss=68.41775 | lr: 0.00038
+Epoch: 76 | train_loss=31.93988 | val_loss=71.13457 | lr: 0.00050
+Epoch: 77 | train_loss=32.29231 | val_loss=68.51361 | lr: 0.00063
+Epoch: 78 | train_loss=33.59327 | val_loss=71.41195 | lr: 0.00075
+Epoch: 79 | train_loss=33.27341 | val_loss=67.56799 | lr: 0.00087
+Epoch: 80 | train_loss=34.10291 | val_loss=67.30877 | lr: 0.00098
+Epoch: 81 | train_loss=34.73788 | val_loss=66.27749 | lr: 0.00107
+Epoch: 82 | train_loss=36.88987 | val_loss=67.33569 | lr: 0.00114
+Epoch: 83 | train_loss=36.50749 | val_loss=67.26887 | lr: 0.00119
+Epoch: 84 | train_loss=35.96791 | val_loss=65.77144 | lr: 0.00120
+Epoch: 85 | train_loss=34.26104 | val_loss=69.59829 | lr: 0.00119
+Epoch: 86 | train_loss=34.96941 | val_loss=78.54862 | lr: 0.00114
+Epoch: 87 | train_loss=35.00730 | val_loss=70.69326 | lr: 0.00107
+Epoch: 88 | train_loss=32.57983 | val_loss=64.49737 | lr: 0.00098
+Epoch: 89 | train_loss=31.44332 | val_loss=69.40787 | lr: 0.00087
+Epoch: 90 | train_loss=30.70302 | val_loss=72.44740 | lr: 0.00075
+Epoch: 91 | train_loss=28.80998 | val_loss=67.47943 | lr: 0.00063
+Epoch: 92 | train_loss=27.91650 | val_loss=65.66057 | lr: 0.00050
+Epoch: 93 | train_loss=25.79836 | val_loss=66.64435 | lr: 0.00038
+Epoch: 94 | train_loss=24.90584 | val_loss=66.11384 | lr: 0.00027
+Epoch: 95 | train_loss=23.94192 | val_loss=67.07912 | lr: 0.00018
+Epoch: 96 | train_loss=23.07207 | val_loss=66.81194 | lr: 0.00011
+Epoch: 97 | train_loss=22.49832 | val_loss=67.69139 | lr: 0.00006
+Epoch: 98 | train_loss=21.77977 | val_loss=67.26625 | lr: 0.00005
+Epoch: 99 | train_loss=21.38256 | val_loss=66.44865 | lr: 0.00006
+Epoch: 100 | train_loss=21.32757 | val_loss=66.72828 | lr: 0.00011
+Epoch: 101 | train_loss=21.48979 | val_loss=66.62220 | lr: 0.00018
+Epoch: 102 | train_loss=21.13304 | val_loss=68.49208 | lr: 0.00027
+Epoch: 103 | train_loss=21.74895 | val_loss=69.30497 | lr: 0.00038
+Epoch: 104 | train_loss=22.62726 | val_loss=67.87193 | lr: 0.00050
+Epoch: 105 | train_loss=23.17891 | val_loss=67.32930 | lr: 0.00062
+Epoch: 106 | train_loss=23.63614 | val_loss=68.49306 | lr: 0.00075
+Epoch: 107 | train_loss=24.90781 | val_loss=66.40739 | lr: 0.00087
+Epoch: 108 | train_loss=25.97929 | val_loss=69.06062 | lr: 0.00098
+Epoch: 109 | train_loss=25.88741 | val_loss=64.93939 | lr: 0.00107
+Epoch: 110 | train_loss=27.44591 | val_loss=65.81404 | lr: 0.00114
+Epoch: 111 | train_loss=27.58224 | val_loss=69.42390 | lr: 0.00119
+Epoch: 112 | train_loss=28.37679 | val_loss=69.03364 | lr: 0.00120
+Epoch: 113 | train_loss=27.27887 | val_loss=65.10982 | lr: 0.00119
+Epoch: 114 | train_loss=27.62744 | val_loss=77.94328 | lr: 0.00114
+Epoch: 115 | train_loss=28.28482 | val_loss=70.24425 | lr: 0.00107
+Epoch: 116 | train_loss=26.50779 | val_loss=70.68349 | lr: 0.00098
+Epoch: 117 | train_loss=25.68073 | val_loss=69.74581 | lr: 0.00087
+Epoch: 118 | train_loss=23.91578 | val_loss=69.68344 | lr: 0.00075
+Epoch: 119 | train_loss=23.42832 | val_loss=64.32616 | lr: 0.00062
+Epoch: 120 | train_loss=22.67085 | val_loss=67.98910 | lr: 0.00050
+Epoch: 121 | train_loss=21.29618 | val_loss=68.04435 | lr: 0.00038
+Epoch: 122 | train_loss=20.67099 | val_loss=68.63216 | lr: 0.00027
+Epoch: 123 | train_loss=19.74854 | val_loss=66.83607 | lr: 0.00018
+Epoch: 124 | train_loss=19.20091 | val_loss=69.04421 | lr: 0.00011
+Epoch: 125 | train_loss=18.92142 | val_loss=68.78521 | lr: 0.00006
+Epoch: 126 | train_loss=18.28348 | val_loss=66.76818 | lr: 0.00005
+Epoch: 127 | train_loss=18.44314 | val_loss=67.54053 | lr: 0.00006
+Epoch: 128 | train_loss=18.42620 | val_loss=68.62392 | lr: 0.00011
+Epoch: 129 | train_loss=17.92765 | val_loss=67.28433 | lr: 0.00018
+Epoch: 130 | train_loss=18.12416 | val_loss=67.39082 | lr: 0.00027
+Epoch: 131 | train_loss=18.34036 | val_loss=68.17194 | lr: 0.00038
+Epoch: 132 | train_loss=18.98241 | val_loss=64.99197 | lr: 0.00050
+Epoch: 133 | train_loss=19.87940 | val_loss=68.07686 | lr: 0.00062
+Epoch: 134 | train_loss=20.32431 | val_loss=67.54928 | lr: 0.00075
+Epoch: 135 | train_loss=21.33144 | val_loss=68.01340 | lr: 0.00087
+Epoch: 136 | train_loss=22.15139 | val_loss=66.72841 | lr: 0.00098
+Epoch: 137 | train_loss=23.15684 | val_loss=67.41342 | lr: 0.00107
+Epoch: 138 | train_loss=23.23313 | val_loss=68.27015 | lr: 0.00114
+Epoch: 139 | train_loss=23.73699 | val_loss=63.38847 | lr: 0.00119
+Epoch: 140 | train_loss=24.15234 | val_loss=68.39399 | lr: 0.00120
+Epoch: 141 | train_loss=23.29487 | val_loss=72.28395 | lr: 0.00119
+Epoch: 142 | train_loss=24.88328 | val_loss=65.66285 | lr: 0.00114
+Epoch: 143 | train_loss=24.67190 | val_loss=70.06041 | lr: 0.00107
+Epoch: 144 | train_loss=23.22295 | val_loss=64.83651 | lr: 0.00098
+Epoch: 145 | train_loss=23.42187 | val_loss=65.01866 | lr: 0.00087
+Epoch: 146 | train_loss=21.57555 | val_loss=67.71428 | lr: 0.00075
+Epoch: 147 | train_loss=21.30028 | val_loss=67.20872 | lr: 0.00062
+Epoch: 148 | train_loss=19.32680 | val_loss=68.80621 | lr: 0.00050
+Epoch: 149 | train_loss=18.86584 | val_loss=68.46177 | lr: 0.00038
+Epoch: 150 | train_loss=18.68251 | val_loss=67.16979 | lr: 0.00027
+Test loss: 56.00140
+Saved 5 forecast plot to: plots/
+Saved loss curve to: plots/loss_curve.png
+
+Process finished with exit code 0

@@ -291,12 +291,12 @@ def xai():
         hist_input_size=len(HIST_FEATURE_COLS)+6,  # +6 for time encodings
         fut_input_size=len(FUT_FEATURE_COLS)+6,
         horizon=24,
-        hidden_size=1024,
+        hidden_size=512,
         num_layers=2,
-        dropout=0.2,
+        dropout=0.3,
         bidirectional=False,
-        head_hidden_size=1024,
-        head_dropout=0.2,
+        head_hidden_size=512,
+        head_dropout=0.3,
         use_layernorm=True,
     )
 
