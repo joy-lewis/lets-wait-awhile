@@ -1,0 +1,41 @@
+tons of CO2 - reduction
+
+
+#base = "next_workday"
+
+
+Germany
+Non-interruptible: 5.93%
+Interruptible:     8.16%
+
+Great Britain
+Non-interruptible: 6.57%
+Interruptible:     9.23%
+
+France
+Non-interruptible: 4.79%
+Interruptible:     6.22%
+
+California
+Non-interruptible: 2.47%
+Interruptible:     5.99%
+
+
+# base = "next_workday_0.05"
+
+Germany
+Non-interruptible: 5.91%
+Interruptible:     7.93%
+
+Great Britain
+Non-interruptible: 6.56%
+Interruptible:     9.03%
+
+France
+Non-interruptible: 4.77%
+Interruptible:     5.92%
+
+California
+Non-interruptible: 2.45%
+Interruptible:     5.71%
+

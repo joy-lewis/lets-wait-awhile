@@ -1,0 +1,24 @@
+# Computing CI difference of workdays and weekend
+
+
+Germany
+[330.7761457]
+[246.69745982]
+25.42%
+
+Great Britain
+[222.64352113]
+[172.15334183]
+22.68%
+
+France
+[60.90446005]
+[47.42044097]
+22.14%
+
+California
+[289.73570402]
+[271.76911269]
+6.20%
+
+
