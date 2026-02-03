@@ -241,6 +241,7 @@ def xai():
         'Hydro Run-of-river and pondage',
         'Hydro Water Reservoir', 'Nuclear', 'Other',
         'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
+        'carbon_intensity'
         #'total_power_mw', 'emissions_weighted',
 
         # Historical weather
