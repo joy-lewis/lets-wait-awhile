@@ -132,7 +132,7 @@ def main():
        'Hydro Run-of-river and pondage',
         'Hydro Water Reservoir', 'Nuclear', 'Other',
         'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
-        'total_power_mw', 'emissions_weighted',
+        #'total_power_mw', 'emissions_weighted',
 
         # Historical weather
         'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
@@ -241,7 +241,7 @@ def xai():
         'Hydro Run-of-river and pondage',
         'Hydro Water Reservoir', 'Nuclear', 'Other',
         'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
-        'total_power_mw', 'emissions_weighted',
+        #'total_power_mw', 'emissions_weighted',
 
         # Historical weather
         'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
@@ -291,11 +291,11 @@ def xai():
         hist_input_size=len(HIST_FEATURE_COLS)+6,  # +6 for time encodings
         fut_input_size=len(FUT_FEATURE_COLS)+6,
         horizon=24,
-        hidden_size=512,
+        hidden_size=1024,
         num_layers=2,
         dropout=0.3,
         bidirectional=False,
-        head_hidden_size=512,
+        head_hidden_size=1024,
         head_dropout=0.3,
         use_layernorm=True,
     )
