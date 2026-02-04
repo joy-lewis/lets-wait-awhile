@@ -3,7 +3,7 @@ import train
 import models
 import torch
 import pandas as pd
-from xai import run_xai_permutation
+from xai import run_xai_permutation, run_horizon_forecast
 
 
 def sanity_check_timeseries_df(df: pd.DataFrame,feature_cols: list[str], target_col: str, expected_freq: str = "H",):
@@ -125,57 +125,68 @@ def main():
     # ]
 
     HIST_FEATURE_COLS = [
-        # Historical Energy Generation
-        'Biomass', 'Fossil Brown coal/Lignite',
-        'Fossil Coal-derived gas', 'Fossil Gas', 'Fossil Hard coal',
-        'Fossil Oil', 'Geothermal',
-       'Hydro Run-of-river and pondage',
-        'Hydro Water Reservoir', 'Nuclear', 'Other',
-        'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
-        #'total_power_mw', 'emissions_weighted',
+        # index
+        #'Time',
 
-        # Historical weather
-        'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
-        'wx_mean__cloud_cover (%)', 'wx_mean__wind_speed_100m (km/h)',
-        'wx_mean__wind_direction_100m (°)', 'wx_mean__precipitation (mm)',
-        'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
-        'wx_mean__shortwave_radiation (W/m²)', 'wx_std__temperature_2m (°C)',
-        'wx_std__relative_humidity_2m (%)', 'wx_std__cloud_cover (%)',
-        'wx_std__wind_speed_100m (km/h)', 'wx_std__wind_direction_100m (°)',
-        'wx_std__precipitation (mm)', 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
-        'wx_std__shortwave_radiation (W/m²)',
-    ]
+        # energy generation
+ 'Biomass',
+ 'Fossil Brown coal/Lignite',
+ 'Fossil Coal-derived gas',
+ 'Fossil Gas',
+ 'Fossil Hard coal',
+ 'Fossil Oil',
+ 'Geothermal',
+ 'Hydro Run-of-river and pondage',
+ 'Hydro Water Reservoir',
+ 'Nuclear',
+ 'Other',
+ 'Other renewable',
+ 'Solar',
+ 'Waste',
+ 'Wind Offshore',
+ 'Wind Onshore',
+ 'total_energy_import',
+ 'total_carbon_import',
+ 'total_energy_export',
+ 'total_carbon_export',
+ 'carbon_intensity',
 
-    FUT_FEATURE_COLS = [
-        # Forecasted weather
-        'wxf__wx_mean__temperature_2m (°C)',
-        'wxf__wx_mean__relative_humidity_2m (%)',
-        'wxf__wx_mean__cloud_cover (%)', 'wxf__wx_mean__wind_speed_120m (km/h)',
-        'wxf__wx_mean__wind_direction_120m (°)',
-        'wxf__wx_mean__precipitation (mm)',
-        'wxf__wx_mean__soil_moisture_1_to_3cm (m³/m³)',
-        'wxf__wx_mean__shortwave_radiation (W/m²)',
-        'wxf__wx_std__temperature_2m (°C)',
-        'wxf__wx_std__relative_humidity_2m (%)', 'wxf__wx_std__cloud_cover (%)',
-        'wxf__wx_std__wind_speed_120m (km/h)',
-        'wxf__wx_std__wind_direction_120m (°)',
-        'wxf__wx_std__precipitation (mm)',
-        'wxf__wx_std__soil_moisture_1_to_3cm (m³/m³)',
-        'wxf__wx_std__shortwave_radiation (W/m²)'
-    ]
+# weather data
+ 'wx_mean__temperature_2m (°C)',
+ 'wx_mean__precipitation (mm)',
+ 'wx_mean__cloud_cover (%)',
+ 'wx_mean__wind_speed_100m (km/h)',
+ 'wx_mean__wind_direction_100m (°)',
+ 'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
+ 'wx_mean__soil_temperature_0_to_7cm (°C)',
+ 'wx_mean__relative_humidity_2m (%)',
+ 'wx_mean__shortwave_radiation (W/m²)',
+ 'wx_mean__shortwave_radiation_instant (W/m²)',
+ 'wx_std__temperature_2m (°C)',
+ 'wx_std__precipitation (mm)',
+ 'wx_std__cloud_cover (%)',
+ 'wx_std__wind_speed_100m (km/h)',
+ 'wx_std__wind_direction_100m (°)',
+ 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
+ 'wx_std__soil_temperature_0_to_7cm (°C)',
+ 'wx_std__relative_humidity_2m (%)',
+ 'wx_std__shortwave_radiation (W/m²)',
+ 'wx_std__shortwave_radiation_instant (W/m²)']
+
+    FUT_FEATURE_COLS = []
 
     TARGET_COL = "carbon_intensity"
 
     # Loading data
     df = pd.read_csv(
-        "../new_data/germany_energy_with_weather_with_forecast_CI.csv",
-        parse_dates=["time"],
-        index_col="time",
+        "../full_datasets/den_2225_generation_carbon_wTarget_wWeather.csv",
+        parse_dates=["Time"],
+        index_col="Time",
     )
     df = df.sort_index()
 
     # Sanity check
-    df = sanity_check_timeseries_df(df, feature_cols=HIST_FEATURE_COLS+FUT_FEATURE_COLS,
+    df = sanity_check_timeseries_df(df, feature_cols=HIST_FEATURE_COLS,
                                     target_col=TARGET_COL, expected_freq="h")
 
     # Model configuration
@@ -183,11 +194,11 @@ def main():
         hist_input_size=len(HIST_FEATURE_COLS)+6,  # +6 for time encodings
         fut_input_size=len(FUT_FEATURE_COLS)+6,
         horizon=24,
-        hidden_size=1024,
+        hidden_size=512,
         num_layers=2,
         dropout=0.15,
         bidirectional=False,
-        head_hidden_size=1024,
+        head_hidden_size=512,
         head_dropout=0.15,
         use_layernorm=True,
     )
@@ -198,12 +209,12 @@ def main():
         hist_feature_cols=HIST_FEATURE_COLS,
         fut_feature_cols=FUT_FEATURE_COLS,
         target_col=TARGET_COL,
-        lookback_steps=30*24,
+        lookback_steps=28*24,
         horizon_steps=24,      # set None to infer; use "H" if your data is hourly
         batch_size=16,
         lr=0.0012,
-        epochs=150,
-        device="cuda" if torch.cuda.is_available() else "cpu",
+        epochs=50,
+        device="cuda" if torch.cuda.is_available() else "mps",
         cfg=cfg,
     )
 
@@ -234,87 +245,111 @@ def xai():
     # ]
 
     HIST_FEATURE_COLS = [
-        # Historical Energy Generation
-        'Biomass', 'Fossil Brown coal/Lignite',
-        'Fossil Coal-derived gas', 'Fossil Gas', 'Fossil Hard coal',
-        'Fossil Oil', 'Geothermal',
-        'Hydro Run-of-river and pondage',
-        'Hydro Water Reservoir', 'Nuclear', 'Other',
-        'Other renewable', 'Solar', 'Waste', 'Wind Offshore', 'Wind Onshore',
-        'carbon_intensity'
-        #'total_power_mw', 'emissions_weighted',
+        # energy generation
+ 'Biomass',
+ 'Fossil Brown coal/Lignite',
+ 'Fossil Coal-derived gas',
+ 'Fossil Gas',
+ 'Fossil Hard coal',
+ 'Fossil Oil',
+ 'Geothermal',
+ 'Hydro Run-of-river and pondage',
+ 'Hydro Water Reservoir',
+ 'Nuclear',
+ 'Other',
+ 'Other renewable',
+ 'Solar',
+ 'Waste',
+ 'Wind Offshore',
+ 'Wind Onshore',
+ 'total_energy_import',
+ 'total_carbon_import',
+ 'total_energy_export',
+ 'total_carbon_export',
+ 'carbon_intensity',
 
-        # Historical weather
-        'wx_mean__temperature_2m (°C)', 'wx_mean__relative_humidity_2m (%)',
-        'wx_mean__cloud_cover (%)', 'wx_mean__wind_speed_100m (km/h)',
-        'wx_mean__wind_direction_100m (°)', 'wx_mean__precipitation (mm)',
-        'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
-        'wx_mean__shortwave_radiation (W/m²)', 'wx_std__temperature_2m (°C)',
-        'wx_std__relative_humidity_2m (%)', 'wx_std__cloud_cover (%)',
-        'wx_std__wind_speed_100m (km/h)', 'wx_std__wind_direction_100m (°)',
-        'wx_std__precipitation (mm)', 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
-        'wx_std__shortwave_radiation (W/m²)',
-    ]
+# weather data
+ 'wx_mean__temperature_2m (°C)',
+ 'wx_mean__precipitation (mm)',
+ 'wx_mean__cloud_cover (%)',
+ 'wx_mean__wind_speed_100m (km/h)',
+ 'wx_mean__wind_direction_100m (°)',
+ 'wx_mean__soil_moisture_0_to_7cm (m³/m³)',
+ 'wx_mean__soil_temperature_0_to_7cm (°C)',
+ 'wx_mean__relative_humidity_2m (%)',
+ 'wx_mean__shortwave_radiation (W/m²)',
+ 'wx_mean__shortwave_radiation_instant (W/m²)',
+ 'wx_std__temperature_2m (°C)',
+ 'wx_std__precipitation (mm)',
+ 'wx_std__cloud_cover (%)',
+ 'wx_std__wind_speed_100m (km/h)',
+ 'wx_std__wind_direction_100m (°)',
+ 'wx_std__soil_moisture_0_to_7cm (m³/m³)',
+ 'wx_std__soil_temperature_0_to_7cm (°C)',
+ 'wx_std__relative_humidity_2m (%)',
+ 'wx_std__shortwave_radiation (W/m²)',
+ 'wx_std__shortwave_radiation_instant (W/m²)']
 
-    FUT_FEATURE_COLS = [
-        # Forecasted weather
-        'wxf__wx_mean__temperature_2m (°C)',
-        'wxf__wx_mean__relative_humidity_2m (%)',
-        'wxf__wx_mean__cloud_cover (%)', 'wxf__wx_mean__wind_speed_120m (km/h)',
-        'wxf__wx_mean__wind_direction_120m (°)',
-        'wxf__wx_mean__precipitation (mm)',
-        'wxf__wx_mean__soil_moisture_1_to_3cm (m³/m³)',
-        'wxf__wx_mean__shortwave_radiation (W/m²)',
-        'wxf__wx_std__temperature_2m (°C)',
-        'wxf__wx_std__relative_humidity_2m (%)', 'wxf__wx_std__cloud_cover (%)',
-        'wxf__wx_std__wind_speed_120m (km/h)',
-        'wxf__wx_std__wind_direction_120m (°)',
-        'wxf__wx_std__precipitation (mm)',
-        'wxf__wx_std__soil_moisture_1_to_3cm (m³/m³)',
-        'wxf__wx_std__shortwave_radiation (W/m²)'
-    ]
+
+    FUT_FEATURE_COLS = []
 
     TARGET_COL = "carbon_intensity"
 
     # Loading data
     df = pd.read_csv(
-        "../new_data/germany_energy_with_weather_with_forecast_CI.csv",
-        parse_dates=["time"],
-        index_col="time",
+        "../full_datasets/den_2225_generation_carbon_wTarget_wWeather.csv",
+        parse_dates=["Time"],
+        index_col="Time",
     )
     df = df.sort_index()
 
     # Sanity check
-    df = sanity_check_timeseries_df(df, feature_cols=HIST_FEATURE_COLS+FUT_FEATURE_COLS, target_col=TARGET_COL, expected_freq="h")
+    df = sanity_check_timeseries_df(df, feature_cols=HIST_FEATURE_COLS, target_col=TARGET_COL, expected_freq="h")
 
     # Model configuration
     cfg = LSTMForecastConfig(
         hist_input_size=len(HIST_FEATURE_COLS)+6,  # +6 for time encodings
         fut_input_size=len(FUT_FEATURE_COLS)+6,
         horizon=24,
-        hidden_size=1024,
+        hidden_size=256,
         num_layers=2,
-        dropout=0.3,
+        dropout=0.15,
         bidirectional=False,
-        head_hidden_size=1024,
-        head_dropout=0.3,
+        head_hidden_size=256,
+        head_dropout=0.15,
         use_layernorm=True,
     )
 
-    res = run_xai_permutation(
+    run_horizon_forecast(
         df=df,
         hist_feature_cols=HIST_FEATURE_COLS,
         fut_feature_cols=FUT_FEATURE_COLS,
         target_col=TARGET_COL,
         cfg=cfg,
         model_pth_path="best_model.pth",
-        lookback_steps=30*24,
+        lookback_steps=28 * 24,
         horizon_steps=24,
         batch_size=16,
         n_repeats=5,
         max_batches=100,
         out_dir="xai",
+        rand_seed=77
     )
+
+    # run_xai_permutation(
+    #     df=df,
+    #     hist_feature_cols=HIST_FEATURE_COLS,
+    #     fut_feature_cols=FUT_FEATURE_COLS,
+    #     target_col=TARGET_COL,
+    #     cfg=cfg,
+    #     model_pth_path="best_model.pth",
+    #     lookback_steps=28*24,
+    #     horizon_steps=24,
+    #     batch_size=16,
+    #     n_repeats=5,
+    #     max_batches=100,
+    #     out_dir="xai",
+    # )
 
 if __name__ == "__main__":
     #test()

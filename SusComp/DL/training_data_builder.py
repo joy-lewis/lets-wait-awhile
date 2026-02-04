@@ -261,15 +261,29 @@ def infer_base_freq(index: pd.DatetimeIndex) -> pd.Timedelta:
     return diffs.median()
 
 
+## Train: 2021–2023 + Jan 1, 2024 00:00 through Jun 30, 2024 23:59:59
+## Val: Jul 1, 2024 00:00 through Dec 31, 2024 23:59:59
+## Test: all of 2025
+
 def anchored_train_val_test_split_indices(
-        df: pd.DataFrame,
-        lookback_steps: int,
-        horizon_steps: int,
-        anchor_hour: int = 3,
-        anchor_minute: int = 0,
-        train_frac: float = 0.70,
-        val_frac: float = 0.15,
+    df: pd.DataFrame,
+    lookback_steps: int,
+    horizon_steps: int,
+    anchor_hour: int = 3,
+    anchor_minute: int = 0,
 ):
+    # Ensure datetime index
+    if isinstance(df.index, pd.DatetimeIndex):
+        t = df.index
+    else:
+        t = pd.to_datetime(df.index, errors="coerce")
+        if pd.isna(t).any():
+            bad = int(pd.isna(t).sum())
+            raise ValueError(f"{bad} index values could not be parsed as datetimes.")
+        df = df.copy()
+        df.index = pd.DatetimeIndex(t)
+        t = df.index
+
     n = len(df)
     t_min = lookback_steps
     t_max_excl = n - horizon_steps
@@ -277,23 +291,29 @@ def anchored_train_val_test_split_indices(
         raise ValueError("Not enough data for the requested lookback/horizon.")
 
     cand = np.arange(t_min, t_max_excl, dtype=np.int64)
-    idx = df.index[cand]
-    mask = (idx.hour == anchor_hour) & (idx.minute == anchor_minute)
-    ts = cand[mask]  # all valid daily forecast start indices
+    tt = t[cand]  # DatetimeIndex slice at candidate starts
 
-    if len(ts) < 10:
-        raise ValueError(f"Too few anchored samples: {len(ts)}. Check anchor time and data frequency.")
+    anchored = (tt.hour == anchor_hour) & (tt.minute == anchor_minute)
 
-    n_valid = len(ts)
-    train_end = int(n_valid * train_frac)
-    val_end = train_end + int(n_valid * val_frac)
+    train_mask = (
+        (tt.year >= 2021) & (tt.year <= 2023) |
+        ((tt.year == 2024) & (tt.month <= 6))
+    )
+    val_mask = (tt.year == 2024) & (tt.month >= 7)
+    test_mask = (tt.year == 2025)
 
-    return {
-        "train": ts[:train_end],
-        "val": ts[train_end:val_end],
-        "test": ts[val_end:],
-    }
+    train_idx = cand[anchored & train_mask]
+    val_idx   = cand[anchored & val_mask]
+    test_idx  = cand[anchored & test_mask]
 
+    if len(train_idx) < 1 or len(val_idx) < 1 or len(test_idx) < 1:
+        raise ValueError(
+            f"Split produced too few samples: "
+            f"train={len(train_idx)}, val={len(val_idx)}, test={len(test_idx)}. "
+            f"Check anchor time, data coverage, and frequency."
+        )
+
+    return {"train": train_idx, "val": val_idx, "test": test_idx}
 
 # def compute_scalers_from_ts(
 #         df: pd.DataFrame,

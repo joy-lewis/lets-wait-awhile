@@ -190,7 +190,7 @@ def run_training(
         target_col=target_col,
         device=device,
         n=5,                # <-- set how many random instances you want
-        seed=7,
+        seed=42,
         out_dir="plots",
         show=False,
         anchor_hour=3,

@@ -27,6 +27,7 @@ EMISSION_MAP = {  # all these features should be also represented in the SusComp
     'Waste':770, # Avg of fossil
     'Wind Offshore':12,
     'Wind Onshore':12,
+    'total_carbon_import':1, # the emissions imported from other countries
 }
 
 
@@ -38,6 +39,10 @@ def add_carbon_intensity(df):
 
     power_cols = list(EMISSION_MAP.keys())
 
+    #  adding energy column for total energy computation
+    power_cols.remove('total_carbon_import')
+    power_cols.append('total_energy_import')
+
     # Sanity check
     missing_cols = [col for col in power_cols if col not in df.columns]
     if missing_cols:
@@ -45,6 +50,10 @@ def add_carbon_intensity(df):
 
     # Total power (MW)
     df['total_power_mw'] = df[power_cols].sum(axis=1)
+
+    # adding carbon column for emissions computation
+    power_cols.remove('total_energy_import')
+    power_cols.append('total_carbon_import')
 
     # Power-weighted emissions (MW * gCO2/kWh)
     df['emissions_weighted'] = sum(
@@ -64,12 +73,12 @@ def add_carbon_intensity(df):
 
 if __name__ == "__main__":
     # Example usage
-    df = pd.read_csv("new_data/germany_energy_with_weather.csv")
-    df["time"] = pd.to_datetime(df["time"])
-    df = df.set_index("time").sort_index()
+    df = pd.read_csv("full_datasets/den_2225_generation_carbon.csv")
+    df["Time"] = pd.to_datetime(df["Time"])
+    df = df.set_index("Time").sort_index()
 
     df_ci = add_carbon_intensity(df)
     print(df_ci[['carbon_intensity']].head())
 
-    df_ci.to_csv("new_data/germany_energy_with_weather_CI.csv")
+    df_ci.to_csv("full_datasets/den_2225_generation_carbon_wTarget.csv")
 
